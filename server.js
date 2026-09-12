@@ -5,6 +5,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -565,6 +566,44 @@ app.post('/api/action', (req, res) => {
   broadcastState();
   broadcastLeaderboard();
   res.json({ success: true, state, leaderboard });
+});
+
+function getLocalIp() {
+  try {
+    const interfaces = os.networkInterfaces();
+    const candidates = [];
+    for (const [name, ifaceList] of Object.entries(interfaces)) {
+      const isVirtual = /vEthernet|virtual|tailscale|loopback|pseudo/i.test(name);
+      const isWifi = /wi-?fi|wlan|wireless/i.test(name);
+      for (const iface of ifaceList) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          const ip = iface.address;
+          if (ip.startsWith('169.254.')) continue;
+          let priority = 10;
+          if (isWifi) priority += 50;
+          if (ip.startsWith('192.168.')) priority += 20;
+          else if (ip.startsWith('10.')) priority += 15;
+          if (isVirtual) priority -= 30;
+          candidates.push({ ip, priority, name });
+        }
+      }
+    }
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.priority - a.priority);
+      return candidates[0].ip;
+    }
+  } catch (e) {}
+  return 'localhost';
+}
+
+app.get('/api/network-info', (req, res) => {
+  const ip = getLocalIp();
+  const port = process.env.PORT || 3000;
+  res.json({
+    localIp: ip,
+    port: port,
+    lanUrl: `http://${ip}:${port}`
+  });
 });
 
 module.exports = app;

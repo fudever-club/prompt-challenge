@@ -149,6 +149,20 @@
           <div class="rule-desc">AI vẽ ảnh tức thì và chấm điểm mức độ giống nhau từ 1 đến 5 sao.</div>
         </div>
       </div>
+
+      <!-- Quick QR Scan Prompt for Spectators -->
+      <div style="margin-top: 22px; display: inline-flex; align-items: center; gap: 14px; background: var(--panel); border: 1px solid var(--panel-line); border-radius: 10px; padding: 10px 20px; cursor: pointer; transition: all 0.15s ease;" onclick="openQrModal()" title="Bấm để phóng to mã QR">
+        <div class="qr-interactive-card" style="padding: 4px; border-radius: 6px;">
+          <canvas id="qrDisplayThumb" width="44" height="44" style="width: 44px; height: 44px;"></canvas>
+        </div>
+        <div style="text-align: left;">
+          <div style="font-size: 13px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px;">
+            <span class="svg-icon" style="color: var(--accent);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></span>
+            Quét mã QR kết nối máy tính bảng / điện thoại
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted);">Bấm vào đây để phóng to mã QR toàn màn hình</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -306,7 +320,146 @@ setInterval(() => {
     fetch('/api/state').then(r => r.json()).then(render).catch(() => {});
   }
 }, 1500);
+
+// ==========================================
+// QR Code Zoom Modal System for Display
+// ==========================================
+let baseOrigin = window.location.origin;
+let currentTarget = 'hub';
+
+function getTargetUrl(target) {
+  switch (target) {
+    case 'teamA': return `${baseOrigin}/team.html?team=A`;
+    case 'teamB': return `${baseOrigin}/team.html?team=B`;
+    case 'display': return `${baseOrigin}/display.html`;
+    case 'hub':
+    default:
+      return `${baseOrigin}/`;
+  }
+}
+
+function renderQr(canvasId, text, size = 260) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !window.QRCode) return;
+  QRCode.toCanvas(canvas, text, {
+    width: size,
+    margin: 1,
+    errorCorrectionLevel: 'H',
+    color: {
+      dark: '#0a0f1d',
+      light: '#ffffff'
+    }
+  }, (err) => {
+    if (err) console.error(err);
+  });
+}
+
+async function initNetworkQr() {
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    try {
+      const res = await fetch('/api/network-info');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.lanUrl && data.localIp !== 'localhost') {
+          baseOrigin = data.lanUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch network info:', e);
+    }
+  } else {
+    baseOrigin = window.location.origin;
+  }
+  renderQr('qrDisplayThumb', getTargetUrl('hub'), 44);
+}
+
+function openQrModal() {
+  document.getElementById('qrModal').style.display = 'flex';
+  updateModalQr();
+}
+
+function closeQrModal() {
+  document.getElementById('qrModal').style.display = 'none';
+}
+
+function handleModalBackdropClick(e) {
+  if (e.target.id === 'qrModal') closeQrModal();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeQrModal();
+});
+
+function switchQrTarget(target, btn) {
+  currentTarget = target;
+  document.querySelectorAll('.qr-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  updateModalQr();
+}
+
+function updateModalQr() {
+  const url = getTargetUrl(currentTarget);
+  document.getElementById('qrModalUrlText').textContent = url;
+  renderQr('qrZoomCanvas', url, 260);
+}
+
+function copyModalUrl() {
+  const url = getTargetUrl(currentTarget);
+  navigator.clipboard.writeText(url).then(() => {
+    const btnText = document.getElementById('modalCopyText');
+    btnText.textContent = 'Đã copy!';
+    setTimeout(() => { btnText.textContent = 'Copy'; }, 2000);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', initNetworkQr);
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  initNetworkQr();
+}
 </script>
 
+<!-- QR Zoom Lightbox Modal -->
+<div id="qrModal" class="qr-modal-backdrop" style="display: none;" onclick="handleModalBackdropClick(event)">
+  <div class="qr-modal-card" onclick="event.stopPropagation()">
+    <div class="qr-modal-header">
+      <div class="qr-modal-title">
+        <span class="svg-icon" style="color: var(--accent);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+        Mã QR Phóng To — Kết Nối Nhanh
+      </div>
+      <button class="qr-modal-close" onclick="closeQrModal()" title="Đóng (Esc)">
+        <span class="svg-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+      </button>
+    </div>
+    <div class="qr-modal-body">
+      <!-- Target Navigation Tabs -->
+      <div class="qr-tabs">
+        <button class="qr-tab active" onclick="switchQrTarget('hub', this)">Trang Chủ (Hub)</button>
+        <button class="qr-tab" onclick="switchQrTarget('teamA', this)">Đội A</button>
+        <button class="qr-tab" onclick="switchQrTarget('teamB', this)">Đội B</button>
+      </div>
+
+      <!-- High-res QR Canvas -->
+      <div class="qr-zoom-canvas-wrap">
+        <canvas id="qrZoomCanvas" width="260" height="260"></canvas>
+      </div>
+
+      <!-- URL display & copy -->
+      <div class="qr-url-box">
+        <span id="qrModalUrlText" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">...</span>
+        <button class="qr-copy-btn" onclick="copyModalUrl()">
+          <span class="svg-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+          <span id="modalCopyText">Copy</span>
+        </button>
+      </div>
+
+      <div class="qr-instruction">
+        Dùng camera điện thoại hoặc Zalo để quét mã QR và mở trực tiếp màn hình này.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/qrcode.min.js"></script>
 </body>
 </html>
