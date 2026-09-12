@@ -135,12 +135,28 @@ document.getElementById('submitPrompt').onclick = () => {
   const val = promptInput.value.trim();
   if (!val || hasSubmitted) return;
   hasSubmitted = true;
-  socket.emit('team:submitPrompt', { team, prompt: val });
+  if (socket.connected) {
+    socket.emit('team:submitPrompt', { team, prompt: val });
+  } else {
+    fetch('/api/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'team:submitPrompt', payload: { team, prompt: val } })
+    }).catch(e => console.warn(e));
+  }
   document.getElementById('submitPrompt').disabled = true;
   show('waitBlock');
   document.getElementById('waitTitle').textContent = 'Đã gửi prompt thành công!';
   document.getElementById('waitText').textContent = 'Đang chờ đội đối thủ hoàn thành...';
 };
+
+// Polling fallback khi chạy trên môi trường không có persistent websocket (Vercel)
+setInterval(() => {
+  if (!socket.connected) {
+    fetch('/api/state').then(r => r.json()).then(render).catch(() => {});
+  }
+}, 1500);
+
 
 function render(s) {
   const teamName = team === 'A' ? s.teamAName : s.teamBName;

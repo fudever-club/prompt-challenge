@@ -1,10 +1,11 @@
 // Prompt Challenge — server.js
-// Chạy: node server.js  (cần Node 18+)
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const server = http.createServer(app);
@@ -12,6 +13,14 @@ const io = new Server(server, { maxHttpBufferSize: 20 * 1024 * 1024 }); // cho p
 
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Supabase client
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_KEY || '';
+let supabase = null;
+if (SUPABASE_URL && SUPABASE_KEY) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+}
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
@@ -350,11 +359,200 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Prompt Challenge server chạy tại http://localhost:${PORT}`);
-  console.log(`  - BTC:      http://localhost:${PORT}/btc.html`);
-  console.log(`  - Đội A:    http://localhost:${PORT}/team.html?team=A`);
-  console.log(`  - Đội B:    http://localhost:${PORT}/team.html?team=B`);
-  console.log(`  - Màn hình: http://localhost:${PORT}/display.html`);
+// ---- REST API (Hỗ trợ Vercel polling & Gallery) ----
+app.get('/api/state', (req, res) => res.json(state));
+app.get('/api/leaderboard', (req, res) => res.json(leaderboard));
+
+// Lấy danh sách ảnh Gallery (kết hợp mẫu có sẵn, ảnh upload local, và Supabase Storage)
+app.get('/api/gallery', async (req, res) => {
+  const list = [];
+
+  // 1. Mẫu có sẵn
+  const samplesDir = path.join(__dirname, 'public', 'assets', 'samples');
+  if (fs.existsSync(samplesDir)) {
+    try {
+      const files = fs.readdirSync(samplesDir);
+      files.forEach((f) => {
+        if (/\.(jpg|jpeg|png|webp)$/i.test(f)) {
+          list.push({
+            id: 'sample-' + f,
+            title: f.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+            url: `/assets/samples/${f}`,
+            source: 'Mẫu có sẵn'
+          });
+        }
+      });
+    } catch (e) {}
+  }
+
+  // 2. Ảnh đã upload local
+  const uploadsDir = path.join(__dirname, 'public', 'assets', 'uploads');
+  if (fs.existsSync(uploadsDir)) {
+    try {
+      const files = fs.readdirSync(uploadsDir);
+      files.forEach((f) => {
+        if (/\.(jpg|jpeg|png|webp)$/i.test(f)) {
+          list.push({
+            id: 'local-' + f,
+            title: f.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+            url: `/assets/uploads/${f}`,
+            source: 'Đã tải lên'
+          });
+        }
+      });
+    } catch (e) {}
+  }
+
+  // 3. Ảnh từ Supabase Storage bucket 'gallery'
+  if (supabase) {
+    try {
+      const { data: supaFiles } = await supabase.storage.from('gallery').list('', { limit: 100 });
+      if (supaFiles && Array.isArray(supaFiles)) {
+        for (const file of supaFiles) {
+          if (file.name && !file.name.startsWith('.')) {
+            const { data: { publicUrl } } = supabase.storage.from('gallery').getPublicUrl(file.name);
+            list.push({
+              id: 'supa-' + file.id,
+              title: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+              url: publicUrl,
+              source: 'Supabase Cloud'
+            });
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  res.json({ gallery: list });
 });
+
+// Upload ảnh mới vào Gallery (lưu Supabase Storage + fallback local)
+app.post('/api/gallery/upload', async (req, res) => {
+  try {
+    const { dataUrl, filename } = req.body;
+    if (!dataUrl) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh (dataUrl)' });
+
+    const safeName = (filename || `ref_${Date.now()}.png`).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    let finalUrl = null;
+
+    // Thử lưu vào Supabase Storage
+    if (supabase) {
+      try {
+        const mime = dataUrl.match(/^data:(image\/\w+);/)?.[1] || 'image/png';
+        const { data: upData, error: upError } = await supabase.storage
+          .from('gallery')
+          .upload(safeName, buffer, {
+            contentType: mime,
+            upsert: true
+          });
+
+        if (!upError && upData) {
+          const { data: { publicUrl } } = supabase.storage.from('gallery').getPublicUrl(safeName);
+          finalUrl = publicUrl;
+        }
+      } catch (err) {
+        console.warn('Supabase storage not available:', err.message);
+      }
+    }
+
+    // Fallback lưu local
+    if (!finalUrl) {
+      const uploadsDir = path.join(__dirname, 'public', 'assets', 'uploads');
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      fs.writeFileSync(path.join(uploadsDir, safeName), buffer);
+      finalUrl = `/assets/uploads/${safeName}`;
+    }
+
+    res.json({ success: true, url: finalUrl, name: safeName });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/action (thực hiện lệnh từ BTC / Team qua REST)
+app.post('/api/action', (req, res) => {
+  const { action, payload } = req.body || {};
+  if (action === 'btc:setTeams') {
+    state.teamAName = payload?.teamAName || 'Đội A';
+    state.teamBName = payload?.teamBName || 'Đội B';
+  } else if (action === 'btc:uploadReference') {
+    clearTimer();
+    state = {
+      ...state,
+      phase: 'idle',
+      round: state.round + 1,
+      referenceImage: payload?.dataUrl,
+      promptA: '', promptB: '',
+      submittedA: false, submittedB: false,
+      imageA: null, imageB: null,
+      scoreA: null, scoreB: null,
+      reasonA: '', reasonB: '',
+    };
+  } else if (action === 'btc:startViewing') {
+    clearTimer();
+    state.phase = 'viewing';
+    state.viewSeconds = payload?.seconds || 60;
+    state.secondsLeft = state.viewSeconds;
+    timer = setInterval(() => {
+      state.secondsLeft -= 1;
+      if (state.secondsLeft <= 0) {
+        clearTimer();
+        state.phase = 'prompting';
+      }
+      broadcastState();
+    }, 1000);
+  } else if (action === 'btc:collapseNow') {
+    clearTimer();
+    state.phase = 'prompting';
+  } else if (action === 'team:submitPrompt') {
+    const { team, prompt } = payload || {};
+    if (state.phase === 'prompting') {
+      if (team === 'A' && !state.submittedA) {
+        state.promptA = prompt;
+        state.submittedA = true;
+      } else if (team === 'B' && !state.submittedB) {
+        state.promptB = prompt;
+        state.submittedB = true;
+      }
+      if (state.submittedA && state.submittedB) {
+        runGenerationAndJudging();
+      }
+    }
+  } else if (action === 'btc:forceGenerate') {
+    if (state.phase === 'prompting') {
+      if (!state.submittedA) { state.promptA = state.promptA || '(không gửi prompt)'; state.submittedA = true; }
+      if (!state.submittedB) { state.promptB = state.promptB || '(không gửi prompt)'; state.submittedB = true; }
+      runGenerationAndJudging();
+    }
+  } else if (action === 'btc:resetRound') {
+    clearTimer();
+    state.phase = 'idle';
+    state.referenceImage = null;
+    state.promptA = ''; state.promptB = '';
+    state.submittedA = false; state.submittedB = false;
+    state.imageA = null; state.imageB = null;
+    state.scoreA = null; state.scoreB = null;
+    state.reasonA = ''; state.reasonB = '';
+  } else if (action === 'btc:resetLeaderboard') {
+    leaderboard = {};
+  }
+  broadcastState();
+  broadcastLeaderboard();
+  res.json({ success: true, state, leaderboard });
+});
+
+module.exports = app;
+
+if (process.env.VERCEL !== '1') {
+  const PORT = process.env.PORT || 3000;
+  server.listen(PORT, () => {
+    console.log(`Prompt Challenge server chạy tại http://localhost:${PORT}`);
+    console.log(`  - BTC:      http://localhost:${PORT}/btc.html`);
+    console.log(`  - Đội A:    http://localhost:${PORT}/team.html?team=A`);
+    console.log(`  - Đội B:    http://localhost:${PORT}/team.html?team=B`);
+    console.log(`  - Màn hình: http://localhost:${PORT}/display.html`);
+  });
+}
+

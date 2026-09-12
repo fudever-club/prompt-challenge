@@ -71,25 +71,22 @@
       <button class="primary" id="saveTeams">Lưu Tên Đội</button>
     </div>
 
-    <!-- Panel 2: Chọn / Upload ảnh Reference -->
+    <!-- Panel 2: Thư viện ảnh Gallery & Upload (Supabase) -->
     <div class="panel">
-      <h2>2. Ảnh Đề Bài (Reference)</h2>
-      <label>Chọn nhanh từ mẫu có sẵn:</label>
-      <div class="preset-gallery">
-        <div class="preset-card" onclick="selectPreset('/assets/samples/cat-astronaut.jpg')">
-          <img src="/assets/samples/cat-astronaut.jpg" alt="Mèo Phi Hành Gia" />
-          <div class="title">Mèo Astronaut</div>
-        </div>
-        <div class="preset-card" onclick="selectPreset('/assets/samples/robot-garden.jpg')">
-          <img src="/assets/samples/robot-garden.jpg" alt="Robot Làm Vườn" />
-          <div class="title">Robot Vườn Hoa</div>
-        </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <h2 style="margin-bottom: 0;">2. Thư Viện Ảnh (Gallery)</h2>
+        <button class="ghost" onclick="loadGallery()" style="padding: 4px 10px; font-size: 12px;">↻ Làm mới</button>
+      </div>
+      <label>Chọn nhanh từ kho ảnh (Mẫu + Supabase Storage):</label>
+      <div class="preset-gallery" id="presetGallery" style="max-height: 190px; overflow-y: auto; padding-right: 4px;">
+        <div style="color: var(--text-dim); font-size: 12px;">Đang tải gallery...</div>
       </div>
 
-      <label>Hoặc tải ảnh mới từ máy tính:</label>
+      <label style="margin-top: 10px;">Hoặc tải ảnh mới (Lưu tự động vào Supabase):</label>
       <input type="file" id="refFile" accept="image/*" />
       <div class="status-line" id="uploadStatus" style="margin-bottom: 0; font-size: 12px;"></div>
     </div>
+
   </div>
 
   <!-- Panel 3: Điều khiển vòng chơi -->
@@ -178,21 +175,58 @@ function fileToDataUrl(file) {
   });
 }
 
+async function loadGallery() {
+  const container = document.getElementById('presetGallery');
+  try {
+    const res = await fetch('/api/gallery');
+    const data = await res.json();
+    const items = data.gallery || [];
+    if (items.length === 0) {
+      container.innerHTML = '<div style="color: var(--text-dim); font-size: 12px; padding: 10px;">Chưa có ảnh trong gallery. Hãy upload ảnh bên dưới!</div>';
+      return;
+    }
+    container.innerHTML = items.map(item => `
+      <div class="preset-card" onclick="selectPreset('${item.url}')" title="${item.title} (${item.source})">
+        <img src="${item.url}" alt="${item.title}" loading="lazy" />
+        <div class="title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    container.innerHTML = '<div style="color: var(--danger); font-size: 12px; padding: 10px;">Không tải được gallery.</div>';
+  }
+}
+
+// Gọi API hành động (hỗ trợ cả Socket.io lẫn REST fallback cho Vercel)
+function sendAction(action, payload = {}) {
+  if (socket.connected) {
+    socket.emit(action, payload);
+  } else {
+    fetch('/api/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, payload })
+    }).then(r => r.json()).then(d => {
+      if (d.state) render(d.state);
+      if (d.leaderboard) renderLeaderboard(d.leaderboard);
+    }).catch(e => console.warn(e));
+  }
+}
+
 async function selectPreset(url) {
-  document.getElementById('uploadStatus').textContent = 'Đang nạp ảnh mẫu...';
+  document.getElementById('uploadStatus').textContent = 'Đang nạp ảnh...';
   try {
     const res = await fetch(url);
     const blob = await res.blob();
     const dataUrl = await fileToDataUrl(blob);
-    socket.emit('btc:uploadReference', dataUrl);
-    document.getElementById('uploadStatus').textContent = '✓ Đã chọn ảnh mẫu — Vòng mới sẵn sàng!';
+    sendAction('btc:uploadReference', dataUrl);
+    document.getElementById('uploadStatus').textContent = '✓ Đã chọn ảnh — Vòng mới sẵn sàng!';
   } catch (err) {
-    document.getElementById('uploadStatus').textContent = 'Không tải được ảnh mẫu.';
+    document.getElementById('uploadStatus').textContent = 'Không nạp được ảnh: ' + err.message;
   }
 }
 
 document.getElementById('saveTeams').onclick = () => {
-  socket.emit('btc:setTeams', {
+  sendAction('btc:setTeams', {
     teamAName: document.getElementById('teamAName').value.trim() || 'Đội A',
     teamBName: document.getElementById('teamBName').value.trim() || 'Đội B',
   });
@@ -201,30 +235,50 @@ document.getElementById('saveTeams').onclick = () => {
 document.getElementById('refFile').onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  document.getElementById('uploadStatus').textContent = 'Đang tải ảnh lên...';
-  const dataUrl = await fileToDataUrl(file);
-  socket.emit('btc:uploadReference', dataUrl);
-  document.getElementById('uploadStatus').textContent = '✓ Đã upload ảnh — Vòng mới sẵn sàng!';
+  document.getElementById('uploadStatus').textContent = 'Đang tải lên Supabase Storage...';
+  try {
+    const dataUrl = await fileToDataUrl(file);
+    // 1. Tải lên Supabase Storage qua backend
+    const upRes = await fetch('/api/gallery/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl, filename: file.name })
+    });
+    const upJson = await upRes.json();
+    
+    // 2. Kích hoạt đề bài cho ván đấu
+    sendAction('btc:uploadReference', dataUrl);
+    document.getElementById('uploadStatus').textContent = '✓ Đã lưu vào kho ảnh và sẵn sàng cho vòng mới!';
+    
+    // 3. Tải lại danh sách gallery để hiện ngay ảnh vừa up
+    loadGallery();
+  } catch (err) {
+    document.getElementById('uploadStatus').textContent = 'Lỗi upload: ' + err.message;
+  }
 };
 
 document.getElementById('startViewing').onclick = () => {
   const secs = parseInt(document.getElementById('viewSeconds').value, 10) || 60;
-  socket.emit('btc:startViewing', secs);
+  sendAction('btc:startViewing', secs);
 };
 
-document.getElementById('collapseNow').onclick = () => socket.emit('btc:collapseNow');
-document.getElementById('forceGenerate').onclick = () => socket.emit('btc:forceGenerate');
-document.getElementById('resetRound').onclick = () => socket.emit('btc:resetRound');
+document.getElementById('collapseNow').onclick = () => sendAction('btc:collapseNow');
+document.getElementById('forceGenerate').onclick = () => sendAction('btc:forceGenerate');
+document.getElementById('resetRound').onclick = () => sendAction('btc:resetRound');
 document.getElementById('resetLeaderboard').onclick = () => {
   if (confirm('Bạn có chắc chắn muốn xóa toàn bộ bảng xếp hạng không?')) {
-    socket.emit('btc:resetLeaderboard');
+    sendAction('btc:resetLeaderboard');
   }
 };
 
 document.getElementById('saveJudgePrompt').onclick = () => {
-  socket.emit('btc:setJudgePrompt', document.getElementById('judgePrompt').value);
+  sendAction('btc:setJudgePrompt', document.getElementById('judgePrompt').value);
   alert('Đã lưu system prompt cho AI chấm điểm.');
 };
+
+// Tự động load gallery khi mở trang
+loadGallery();
+
 
 function statusText(s) {
   switch (s.phase) {

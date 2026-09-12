@@ -216,6 +216,14 @@ function render(s) {
 }
 
 socket.on('state', render);
+
+// Polling fallback khi chạy trên serverless / Vercel
+setInterval(() => {
+  if (!socket.connected) {
+    fetch('/api/state').then(r => r.json()).then(render).catch(() => {});
+  }
+}, 1500);
 </script>
+
 </body>
 </html>
