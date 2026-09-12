@@ -334,14 +334,6 @@
         Mở Khóa Bàn Điều Khiển
         <span class="svg-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
       </button>
-      <div style="display: flex; gap: 8px; margin-top: 10px;">
-        <button type="button" class="ghost" onclick="quickFillPassword()" style="flex: 1; font-size: 11px; padding: 8px;">
-          🔑 Điền: dever2026
-        </button>
-        <button type="button" class="ghost" onclick="bypassLogin()" style="flex: 1; font-size: 11px; padding: 8px; color: var(--accent);">
-          ⚡ Vào nhanh Admin
-        </button>
-      </div>
     </form>
     <div style="margin-top: 18px; font-size: 11px; color: var(--text-dim); font-family: var(--font-mono);">
       FU-DEVER Club • FPT University Da Nang
@@ -621,24 +613,21 @@ function setTeamPreset(a, b) {
   showToast(`Đã chọn: ${a} vs ${b}`);
 }
 
-function quickFillPassword() {
-  document.getElementById('adminPass').value = 'dever2026';
-  showToast('Đã điền mật khẩu mặc định dever2026');
-}
-
-function bypassLogin() {
-  sessionStorage.setItem('dever_admin_token', 'bypass_token_' + Date.now());
-  showDashboard();
-  showToast('Đã mở bảng điều khiển Admin!');
-}
-
 // Authentication
 async function handleLogin(e) {
   if (e) e.preventDefault();
-  const pass = document.getElementById('adminPass').value.trim() || 'dever2026';
+  const pass = document.getElementById('adminPass').value.trim();
   const errorEl = document.getElementById('loginError');
   const card = document.getElementById('loginCard');
   const submitBtn = document.getElementById('btnLoginSubmit');
+
+  if (!pass) {
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Vui lòng nhập mật khẩu Ban Tổ Chức!';
+    card.classList.add('shake');
+    setTimeout(() => card.classList.remove('shake'), 400);
+    return;
+  }
 
   submitBtn.disabled = true;
   submitBtn.textContent = 'Đang xác thực...';
@@ -661,10 +650,8 @@ async function handleLogin(e) {
       setTimeout(() => card.classList.remove('shake'), 400);
     }
   } catch (err) {
-    // Graceful fallback for local development
-    sessionStorage.setItem('dever_admin_token', 'local_admin_' + Date.now());
-    showDashboard();
-    showToast('Đã mở bàn điều khiển');
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Lỗi kết nối máy chủ: ' + err.message;
   } finally {
     submitBtn.disabled = false;
     submitBtn.innerHTML = 'Mở Khóa Bàn Điều Khiển <span class="svg-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>';

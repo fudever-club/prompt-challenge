@@ -600,10 +600,10 @@ app.post('/api/gallery/upload', async (req, res) => {
 app.post('/api/admin/login', (req, res) => {
   const { password } = req.body || {};
   const correct = process.env.ADMIN_PASSWORD || 'dever2026';
-  if (password === correct || password === 'admin' || password === 'dever2026' || !password) {
+  if (password && (password === correct || password === 'dever2026')) {
     return res.json({ success: true, token: 'dever_admin_' + Date.now() });
   }
-  return res.status(401).json({ success: false, error: 'Mật khẩu quản trị không chính xác! (Mặc định: dever2026)' });
+  return res.status(401).json({ success: false, error: 'Mật khẩu quản trị không chính xác. Vui lòng thử lại!' });
 });
 
 // POST /api/action (thực hiện lệnh từ BTC / Team qua REST)
