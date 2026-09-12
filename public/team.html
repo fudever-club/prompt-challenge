@@ -96,10 +96,12 @@
 
   <!-- 5. Result Block (Kết quả của đội mình) -->
   <div id="resultBlock" class="panel" style="display:none;">
-    <div class="phase-tag">Kết quả của đội bạn</div>
+    <div class="phase-tag">Kết quả trận đấu</div>
     <div style="text-align: center; margin-bottom: 16px;">
-      <img class="result-image" id="resultImage" src="" alt="Ảnh tạo ra" style="max-width: 440px; margin: 0 auto;" />
+      <div id="teamWinStatus" style="font-size: 20px; font-weight: 800; margin-bottom: 12px;"></div>
+      <img class="result-image" id="resultImage" src="" alt="Ảnh tạo ra" style="max-width: 420px; margin: 0 auto;" />
       <div class="score-big" id="resultScore">0 ★</div>
+      <div id="versusSummary" style="font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"></div>
       <div class="reason" id="resultReason" style="font-size: 14px; max-width: 520px; margin: 8px auto 0;"></div>
     </div>
   </div>
@@ -209,12 +211,26 @@ function render(s) {
 
   if (s.phase === 'results') {
     show('resultBlock');
-    const img = team === 'A' ? s.imageA : s.imageB;
-    const score = team === 'A' ? s.scoreA : s.scoreB;
-    const reason = team === 'A' ? s.reasonA : s.reasonB;
+    const isA = team === 'A';
+    const myScore = isA ? s.scoreA : s.scoreB;
+    const oppScore = isA ? s.scoreB : s.scoreA;
+    const oppName = isA ? s.teamBName : s.teamAName;
+    const img = isA ? s.imageA : s.imageB;
+    const reason = isA ? s.reasonA : s.reasonB;
+
     document.getElementById('resultImage').src = img || '';
-    document.getElementById('resultScore').textContent = `${score} ★`;
+    document.getElementById('resultScore').textContent = `${myScore} ★`;
     document.getElementById('resultReason').textContent = reason || '';
+    document.getElementById('versusSummary').textContent = `Tỷ số: Bạn (${myScore} ★) vs ${oppName} (${oppScore} ★)`;
+
+    const winStatus = document.getElementById('teamWinStatus');
+    if (myScore > oppScore) {
+      winStatus.innerHTML = '<span style="color: var(--success);">🏆 XUẤT SẮC! ĐỘI BẠN ĐÃ CHIẾN THẮNG!</span>';
+    } else if (myScore < oppScore) {
+      winStatus.innerHTML = '<span style="color: var(--text-dim);">👏 HOÀN THÀNH TỐT! ĐỐI THỦ ĐÃ DẪN ĐIỂM.</span>';
+    } else {
+      winStatus.innerHTML = '<span style="color: var(--accent);">🤝 HAI ĐỘI HÒA NHAU!</span>';
+    }
     return;
   }
 

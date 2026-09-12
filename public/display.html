@@ -60,6 +60,49 @@
       margin-top: 12px;
       font-family: var(--font-mono);
     }
+    /* Results Ref Comparison */
+    .results-ref-bar {
+      background: var(--panel);
+      border: 1px solid var(--panel-line);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .results-ref-img {
+      max-height: 200px;
+      width: auto;
+      border-radius: 6px;
+      border: 1px solid var(--panel-line);
+      object-fit: cover;
+      margin-top: 8px;
+    }
+    .team-result-badge {
+      display: inline-block;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .badge-win {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--success);
+      color: var(--success);
+    }
+    .badge-tie {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+    .badge-lose {
+      background: var(--panel-elevated);
+      border: 1px solid var(--panel-line);
+      color: var(--text-dim);
+    }
   </style>
 </head>
 <body>
@@ -143,19 +186,33 @@
   <!-- 5. Results Block (Kết quả đối đầu) -->
   <div id="resultsBlock" style="display:none;">
     <div class="phase-tag">Giai đoạn 3: Kết quả đối đầu</div>
-    <h2 style="font-size: 28px; font-weight: 800; margin-bottom: 24px;">SO SÁNH KẾT QUẢ 2 ĐỘI</h2>
+    <h2 style="font-size: 28px; font-weight: 800; margin-bottom: 18px;">SO SÁNH KẾT QUẢ ĐỐI ĐẦU</h2>
+
+    <!-- Hộp ảnh Đề Bài Gốc để đối chiếu trực quan -->
+    <div class="results-ref-bar">
+      <div style="font-size: 13px; color: var(--accent); font-family: var(--font-mono); font-weight: 700; text-transform: uppercase;">
+        🎯 Ảnh Đề Bài Gốc (Reference Benchmark)
+      </div>
+      <img class="results-ref-img" id="resultRefImg" src="" alt="Ảnh Đề Bài Gốc" />
+    </div>
+
+    <!-- 2 Đội Đối Đầu -->
     <div class="grid-2">
-      <div class="team-card a">
-        <div class="name" id="nameA" style="font-size: 20px;">Đội A</div>
+      <div class="team-card a" id="cardResultA">
+        <div class="team-result-badge" id="badgeResultA"></div>
+        <div class="name" id="nameA" style="font-size: 22px;">Đội A</div>
         <img class="result-image" id="imageA" src="" alt="Ảnh Đội A" />
         <div class="score-big" id="scoreA">0 ★</div>
         <div class="reason" id="reasonA" style="font-size: 14px; text-align: left; margin-top: 10px;"></div>
+        <div id="promptQuoteA" style="font-size: 12px; color: var(--text-dim); margin-top: 8px; font-family: var(--font-mono); text-align: left;"></div>
       </div>
-      <div class="team-card b">
-        <div class="name" id="nameB" style="font-size: 20px;">Đội B</div>
+      <div class="team-card b" id="cardResultB">
+        <div class="team-result-badge" id="badgeResultB"></div>
+        <div class="name" id="nameB" style="font-size: 22px;">Đội B</div>
         <img class="result-image" id="imageB" src="" alt="Ảnh Đội B" />
         <div class="score-big" id="scoreB">0 ★</div>
         <div class="reason" id="reasonB" style="font-size: 14px; text-align: left; margin-top: 10px;"></div>
+        <div id="promptQuoteB" style="font-size: 12px; color: var(--text-dim); margin-top: 8px; font-family: var(--font-mono); text-align: left;"></div>
       </div>
     </div>
   </div>
@@ -212,6 +269,28 @@ function render(s) {
     document.getElementById('scoreB').textContent = `${s.scoreB} ★`;
     document.getElementById('reasonA').textContent = s.reasonA || '';
     document.getElementById('reasonB').textContent = s.reasonB || '';
+    document.getElementById('resultRefImg').src = s.referenceImage || '';
+    if (s.promptA) document.getElementById('promptQuoteA').textContent = `Prompt: "${s.promptA}"`;
+    if (s.promptB) document.getElementById('promptQuoteB').textContent = `Prompt: "${s.promptB}"`;
+
+    const badgeA = document.getElementById('badgeResultA');
+    const badgeB = document.getElementById('badgeResultB');
+    if (s.scoreA > s.scoreB) {
+      badgeA.className = 'team-result-badge badge-win';
+      badgeA.textContent = '🏆 CHIẾN THẮNG';
+      badgeB.className = 'team-result-badge badge-lose';
+      badgeB.textContent = '👏 HOÀN THÀNH TỐT';
+    } else if (s.scoreB > s.scoreA) {
+      badgeB.className = 'team-result-badge badge-win';
+      badgeB.textContent = '🏆 CHIẾN THẮNG';
+      badgeA.className = 'team-result-badge badge-lose';
+      badgeA.textContent = '👏 HOÀN THÀNH TỐT';
+    } else {
+      badgeA.className = 'team-result-badge badge-tie';
+      badgeA.textContent = '🤝 HÒA NHAU';
+      badgeB.className = 'team-result-badge badge-tie';
+      badgeB.textContent = '🤝 HÒA NHAU';
+    }
   }
 }
 
