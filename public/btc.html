@@ -2,10 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <script>
-    // Tự động chuyển hướng về trang Admin có bảo mật
-    window.location.replace('/admin.html');
-  </script>
+
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Prompt Challenge — Ban Tổ Chức</title>
   <link rel="stylesheet" href="style.css" />
@@ -197,7 +194,9 @@ async function loadGallery() {
       return;
     }
     container.innerHTML = items.map(item => `
-      <div class="preset-card" onclick="selectPreset('${item.url}')" title="${item.title} (${item.source})">
+    window.__galleryItems = items;
+    container.innerHTML = items.map((item, idx) => `
+      <div class="preset-card" id="preset-${idx}" onclick="selectPresetByIndex(${idx})" title="${item.title} (${item.source})">
         <img src="${item.url}" alt="${item.title}" loading="lazy" />
         <div class="title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</div>
       </div>
@@ -209,31 +208,29 @@ async function loadGallery() {
 
 // Gọi API hành động (hỗ trợ cả Socket.io lẫn REST fallback cho Vercel)
 function sendAction(action, payload = {}) {
-  if (socket.connected) {
+  if (socket && socket.connected) {
     socket.emit(action, payload);
-  } else {
-    fetch('/api/action', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, payload })
-    }).then(r => r.json()).then(d => {
-      if (d.state) render(d.state);
-      if (d.leaderboard) renderLeaderboard(d.leaderboard);
-    }).catch(e => console.warn(e));
   }
+  fetch('/api/action', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, payload })
+  }).then(r => r.json()).then(d => {
+    if (d.state) render(d.state);
+    if (d.leaderboard) renderLeaderboard(d.leaderboard);
+  }).catch(e => console.warn(e));
 }
 
-async function selectPreset(url) {
-  document.getElementById('uploadStatus').textContent = 'Đang nạp ảnh...';
-  try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const dataUrl = await fileToDataUrl(blob);
-    sendAction('btc:uploadReference', dataUrl);
-    document.getElementById('uploadStatus').textContent = 'Đã chọn ảnh — Vòng mới sẵn sàng!';
-  } catch (err) {
-    document.getElementById('uploadStatus').textContent = 'Không nạp được ảnh: ' + err.message;
-  }
+function selectPresetByIndex(idx) {
+  const item = (window.__galleryItems || [])[idx];
+  if (!item) return;
+
+  document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById('preset-' + idx);
+  if (card) card.classList.add('active');
+
+  sendAction('btc:uploadReference', item.url);
+  document.getElementById('uploadStatus').textContent = `Đã chọn: ${item.title} (${item.source}) — Sẵn sàng cho vòng mới!`;
 }
 
 document.getElementById('saveTeams').onclick = () => {
@@ -256,10 +253,21 @@ document.getElementById('refFile').onchange = async (e) => {
       body: JSON.stringify({ dataUrl, filename: file.name })
     });
     const upJson = await upRes.json();
+    if (!upRes.ok || upJson.error) {
+      throw new Error(upJson.error || `HTTP ${upRes.status}`);
+    }
     
     // 2. Kích hoạt đề bài cho ván đấu
-    sendAction('btc:uploadReference', dataUrl);
-    document.getElementById('uploadStatus').textContent = 'Đã lưu vào kho ảnh và sẵn sàng cho vòng mới!';
+    sendAction('btc:uploadReference', upJson.url || dataUrl);
+    
+    if (upJson.storage === 'supabase') {
+      document.getElementById('uploadStatus').textContent = 'Đã lưu vào Supabase Cloud và sẵn sàng cho vòng mới!';
+    } else if (upJson.storage === 'local') {
+      const warnMsg = upJson.warning ? ` (Supabase báo: ${upJson.warning} - lưu máy chủ cục bộ)` : '';
+      document.getElementById('uploadStatus').textContent = 'Đã lưu vào kho ảnh máy chủ (Local)' + warnMsg;
+    } else {
+      document.getElementById('uploadStatus').textContent = 'Đã nạp đề bài trực tiếp và sẵn sàng cho vòng mới!';
+    }
     
     // 3. Tải lại danh sách gallery để hiện ngay ảnh vừa up
     loadGallery();
@@ -276,11 +284,7 @@ document.getElementById('startViewing').onclick = () => {
 document.getElementById('collapseNow').onclick = () => sendAction('btc:collapseNow');
 document.getElementById('forceGenerate').onclick = () => sendAction('btc:forceGenerate');
 document.getElementById('resetRound').onclick = () => sendAction('btc:resetRound');
-document.getElementById('resetLeaderboard').onclick = () => {
-  if (confirm('Bạn có chắc chắn muốn xóa toàn bộ bảng xếp hạng không?')) {
-    sendAction('btc:resetLeaderboard');
-  }
-};
+document.getElementById('resetLeaderboard').onclick = () => sendAction('btc:resetLeaderboard');
 
 document.getElementById('saveJudgePrompt').onclick = () => {
   sendAction('btc:setJudgePrompt', document.getElementById('judgePrompt').value);

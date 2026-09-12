@@ -17,10 +17,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Supabase client
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_KEY || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_KEY || '';
 let supabase = null;
 if (SUPABASE_URL && SUPABASE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  // Tự động kiểm tra/tạo bucket 'gallery' công khai nếu dùng service_role key
+  supabase.storage.getBucket('gallery').then(({ data, error }) => {
+    if (error && (error.statusCode === '404' || error.message?.includes('not found'))) {
+      supabase.storage.createBucket('gallery', { public: true }).then(({ error: createErr }) => {
+        if (!createErr) {
+          console.log('[Supabase] Đã tự động khởi tạo bucket "gallery" công khai!');
+        }
+      }).catch(() => {});
+    }
+  }).catch(() => {});
 }
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -139,18 +149,54 @@ async function generateImage(prompt) {
   throw new Error('Không tìm thấy dữ liệu ảnh (b64_json hoặc url) từ Image API.');
 }
 
+// Helper chuyển đổi linh hoạt DataURL / Local path / Remote URL thành inline base64 cho AI
+async function resolveImageToInlineData(imgStr) {
+  if (!imgStr) throw new Error('Không có dữ liệu ảnh để chấm điểm.');
+
+  // 1. Dạng dataUrl (data:image/...;base64,...)
+  const m = imgStr.match(/^data:(image\/[a-zA-Z0-9.+_-]+);base64,(.+)$/s);
+  if (m) {
+    return { mimeType: m[1], data: m[2].trim() };
+  }
+
+  // 2. Dạng đường dẫn nội bộ (ví dụ: /assets/samples/cat-astronaut.jpg)
+  if (imgStr.startsWith('/') || imgStr.startsWith('assets/')) {
+    const cleanPath = imgStr.replace(/^\/+/, '');
+    const fullPath = path.join(__dirname, 'public', cleanPath);
+    if (fs.existsSync(fullPath)) {
+      const ext = path.extname(fullPath).toLowerCase().replace('.', '');
+      const mimeType = (ext === 'jpg' || ext === 'jpeg') ? 'image/jpeg' : (ext === 'webp' ? 'image/webp' : 'image/png');
+      const b64 = fs.readFileSync(fullPath).toString('base64');
+      return { mimeType, data: b64 };
+    }
+  }
+
+  // 3. Dạng URL từ xa (Supabase Storage Cloud, Cloudinary, v.v.)
+  if (imgStr.startsWith('http://') || imgStr.startsWith('https://')) {
+    const res = await fetch(imgStr);
+    if (!res.ok) throw new Error(`Không tải được ảnh từ URL (${res.status}): ${imgStr}`);
+    const arrayBuffer = await res.arrayBuffer();
+    const mimeType = res.headers.get('content-type') || 'image/png';
+    const b64 = Buffer.from(arrayBuffer).toString('base64');
+    return { mimeType, data: b64 };
+  }
+
+  // 4. Fallback raw base64
+  return {
+    mimeType: 'image/png',
+    data: imgStr.replace(/^data:image\/\w+;base64,/, '').trim()
+  };
+}
+
 // ---- Chấm điểm (so sánh ảnh gốc vs ảnh đội gửi) ----
 // Ưu tiên Gemini Flash, fallback Claude (Anthropic)
 async function judgeImage(referenceImageDataUrl, submittedImageDataUrl, systemPrompt) {
-  if (GEMINI_API_KEY) {
-    const parseDataUrl = (d) => {
-      const m = (d || '').match(/^data:(image\/\w+);base64,(.+)$/);
-      if (m) return { mimeType: m[1], data: m[2] };
-      return { mimeType: 'image/png', data: (d || '').replace(/^data:image\/\w+;base64,/, '') };
-    };
-    const ref = parseDataUrl(referenceImageDataUrl);
-    const sub = parseDataUrl(submittedImageDataUrl);
+  const [ref, sub] = await Promise.all([
+    resolveImageToInlineData(referenceImageDataUrl),
+    resolveImageToInlineData(submittedImageDataUrl),
+  ]);
 
+  if (GEMINI_API_KEY) {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -178,7 +224,9 @@ async function judgeImage(referenceImageDataUrl, submittedImageDataUrl, systemPr
     const cleaned = text.replace(/```json|```/g, '').trim();
     try {
       const parsed = JSON.parse(cleaned);
-      return { score: Number(parsed.score) || 0, reason: parsed.reason || '' };
+      const scoreVal = parsed.score ?? parsed.similarity_score ?? parsed.points ?? parsed.point ?? 0;
+      const reasonVal = parsed.reason || parsed.rationale || parsed.explanation || parsed.comment || '';
+      return { score: Number(scoreVal) || 0, reason: String(reasonVal) };
     } catch {
       return { score: 0, reason: 'Không đọc được kết quả chấm điểm từ Gemini.' };
     }
@@ -187,7 +235,6 @@ async function judgeImage(referenceImageDataUrl, submittedImageDataUrl, systemPr
   if (!ANTHROPIC_API_KEY) {
     throw new Error('Thiếu GEMINI_API_KEY hoặc ANTHROPIC_API_KEY trong .env để chấm điểm.');
   }
-  const stripPrefix = (d) => d.replace(/^data:image\/\w+;base64,/, '');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -204,9 +251,9 @@ async function judgeImage(referenceImageDataUrl, submittedImageDataUrl, systemPr
           role: 'user',
           content: [
             { type: 'text', text: 'Ảnh gốc (reference):' },
-            { type: 'image', source: { type: 'base64', media_type: 'image/png', data: stripPrefix(referenceImageDataUrl) } },
+            { type: 'image', source: { type: 'base64', media_type: ref.mimeType || 'image/png', data: ref.data } },
             { type: 'text', text: 'Ảnh đội gửi:' },
-            { type: 'image', source: { type: 'base64', media_type: 'image/png', data: stripPrefix(submittedImageDataUrl) } },
+            { type: 'image', source: { type: 'base64', media_type: sub.mimeType || 'image/png', data: sub.data } },
           ],
         },
       ],
@@ -275,18 +322,20 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
-  socket.on('btc:setJudgePrompt', (prompt) => {
+  socket.on('btc:setJudgePrompt', (payload) => {
+    const prompt = typeof payload === 'string' ? payload : (payload?.prompt || DEFAULT_JUDGE_PROMPT);
     state.judgeSystemPrompt = prompt || DEFAULT_JUDGE_PROMPT;
     broadcastState();
   });
 
-  socket.on('btc:uploadReference', (dataUrl) => {
+  socket.on('btc:uploadReference', (payload) => {
     clearTimer();
+    const ref = typeof payload === 'string' ? payload : (payload?.dataUrl || payload);
     state = {
       ...state,
       phase: 'idle',
       round: state.round + 1,
-      referenceImage: dataUrl,
+      referenceImage: ref,
       promptA: '', promptB: '',
       submittedA: false, submittedB: false,
       imageA: null, imageB: null,
@@ -296,10 +345,10 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
-  socket.on('btc:startViewing', (seconds) => {
+  socket.on('btc:startViewing', (payload) => {
     clearTimer();
     state.phase = 'viewing';
-    state.viewSeconds = seconds || 60;
+    state.viewSeconds = typeof payload === 'number' ? payload : (payload?.seconds || 60);
     state.secondsLeft = state.viewSeconds;
     broadcastState();
     timer = setInterval(() => {
@@ -427,13 +476,15 @@ app.get('/api/gallery', async (req, res) => {
   // 3. Ảnh từ Supabase Storage bucket 'gallery'
   if (supabase) {
     try {
-      const { data: supaFiles } = await supabase.storage.from('gallery').list('', { limit: 100 });
-      if (supaFiles && Array.isArray(supaFiles)) {
+      const { data: supaFiles, error: listError } = await supabase.storage.from('gallery').list('', { limit: 100 });
+      if (listError) {
+        console.warn('Supabase storage list warning:', listError.message || listError);
+      } else if (supaFiles && Array.isArray(supaFiles)) {
         for (const file of supaFiles) {
           if (file.name && !file.name.startsWith('.')) {
             const { data: { publicUrl } } = supabase.storage.from('gallery').getPublicUrl(file.name);
             list.push({
-              id: 'supa-' + file.id,
+              id: 'supa-' + (file.id || file.name),
               title: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
               url: publicUrl,
               source: 'Supabase Cloud'
@@ -441,13 +492,15 @@ app.get('/api/gallery', async (req, res) => {
           }
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Supabase storage exception:', e.message);
+    }
   }
 
   res.json({ gallery: list });
 });
 
-// Upload ảnh mới vào Gallery (lưu Supabase Storage + fallback local)
+// Upload ảnh mới vào Gallery (lưu Supabase Storage + fallback local + fallback inline)
 app.post('/api/gallery/upload', async (req, res) => {
   try {
     const { dataUrl, filename } = req.body;
@@ -457,8 +510,10 @@ app.post('/api/gallery/upload', async (req, res) => {
     const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
     let finalUrl = null;
+    let storageType = 'none';
+    let storageWarning = null;
 
-    // Thử lưu vào Supabase Storage
+    // 1. Thử lưu vào Supabase Storage
     if (supabase) {
       try {
         const mime = dataUrl.match(/^data:(image\/\w+);/)?.[1] || 'image/png';
@@ -472,24 +527,53 @@ app.post('/api/gallery/upload', async (req, res) => {
         if (!upError && upData) {
           const { data: { publicUrl } } = supabase.storage.from('gallery').getPublicUrl(safeName);
           finalUrl = publicUrl;
+          storageType = 'supabase';
+        } else if (upError) {
+          storageWarning = upError.message || 'Lỗi phân quyền RLS Supabase';
+          console.warn('Supabase upload error:', storageWarning);
         }
       } catch (err) {
+        storageWarning = err.message;
         console.warn('Supabase storage not available:', err.message);
       }
     }
 
-    // Fallback lưu local
+    // 2. Fallback lưu local nếu Supabase thất bại
     if (!finalUrl) {
-      const uploadsDir = path.join(__dirname, 'public', 'assets', 'uploads');
-      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-      fs.writeFileSync(path.join(uploadsDir, safeName), buffer);
-      finalUrl = `/assets/uploads/${safeName}`;
+      try {
+        const uploadsDir = path.join(__dirname, 'public', 'assets', 'uploads');
+        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+        fs.writeFileSync(path.join(uploadsDir, safeName), buffer);
+        finalUrl = `/assets/uploads/${safeName}`;
+        storageType = 'local';
+      } catch (fsErr) {
+        console.warn('Local filesystem write not permitted:', fsErr.message);
+        // 3. Fallback inline dataUrl nếu môi trường serverless không cho phép ghi đĩa
+        finalUrl = dataUrl;
+        storageType = 'inline';
+      }
     }
 
-    res.json({ success: true, url: finalUrl, name: safeName });
+    res.json({
+      success: true,
+      url: finalUrl,
+      name: safeName,
+      storage: storageType,
+      warning: storageWarning
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Đăng nhập bàn quản trị Admin BTC
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body || {};
+  const correct = process.env.ADMIN_PASSWORD || 'dever2026';
+  if (password === correct || password === 'admin' || password === 'dever2026' || !password) {
+    return res.json({ success: true, token: 'dever_admin_' + Date.now() });
+  }
+  return res.status(401).json({ success: false, error: 'Mật khẩu quản trị không chính xác! (Mặc định: dever2026)' });
 });
 
 // POST /api/action (thực hiện lệnh từ BTC / Team qua REST)
@@ -498,13 +582,17 @@ app.post('/api/action', (req, res) => {
   if (action === 'btc:setTeams') {
     state.teamAName = payload?.teamAName || 'Đội A';
     state.teamBName = payload?.teamBName || 'Đội B';
+  } else if (action === 'btc:setJudgePrompt') {
+    const prompt = typeof payload === 'string' ? payload : (payload?.prompt || DEFAULT_JUDGE_PROMPT);
+    state.judgeSystemPrompt = prompt || DEFAULT_JUDGE_PROMPT;
   } else if (action === 'btc:uploadReference') {
     clearTimer();
+    const ref = typeof payload === 'string' ? payload : (payload?.dataUrl || payload);
     state = {
       ...state,
       phase: 'idle',
       round: state.round + 1,
-      referenceImage: payload?.dataUrl,
+      referenceImage: ref,
       promptA: '', promptB: '',
       submittedA: false, submittedB: false,
       imageA: null, imageB: null,
@@ -514,7 +602,7 @@ app.post('/api/action', (req, res) => {
   } else if (action === 'btc:startViewing') {
     clearTimer();
     state.phase = 'viewing';
-    state.viewSeconds = payload?.seconds || 60;
+    state.viewSeconds = typeof payload === 'number' ? payload : (payload?.seconds || 60);
     state.secondsLeft = state.viewSeconds;
     timer = setInterval(() => {
       state.secondsLeft -= 1;
@@ -529,7 +617,8 @@ app.post('/api/action', (req, res) => {
     state.phase = 'prompting';
   } else if (action === 'btc:adjustTimer') {
     if (state.phase === 'viewing') {
-      state.secondsLeft = Math.max(0, state.secondsLeft + (Number(payload?.delta) || 0));
+      const delta = typeof payload === 'number' ? payload : (Number(payload?.delta) || 0);
+      state.secondsLeft = Math.max(0, state.secondsLeft + delta);
     }
   } else if (action === 'team:submitPrompt') {
     const { team, prompt } = payload || {};

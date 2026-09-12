@@ -50,9 +50,21 @@
       <h2 style="font-size: 20px; font-weight: 800; color: var(--text); justify-content: center; margin-bottom: 6px;" id="idleTeamGreeting">
         SẴN SÀNG THI ĐẤU
       </h2>
-      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 18px;">
         Vui lòng chờ Ban Tổ Chức kích hoạt vòng đấu mới trên màn hình chính.
       </p>
+
+      <!-- Action buttons for Team / Tester -->
+      <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 22px; flex-wrap: wrap;">
+        <button type="button" class="accent" id="btnTestPrompt" onclick="startPracticeMode()" style="font-size: 14px; padding: 10px 18px; font-weight: 700;">
+          <span class="svg-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
+          Thử Soạn Prompt Ngay
+        </button>
+        <button type="button" class="ghost" id="btnCheckConn" onclick="checkConnection()" style="font-size: 13px; padding: 10px 16px;">
+          <span class="svg-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span>
+          Kiểm Tra Kết Nối
+        </button>
+      </div>
 
       <div class="mascot-hint" style="background: var(--bg); text-align: left;">
         <div>
@@ -74,20 +86,41 @@
     <div class="timer accent" id="timer">60</div>
     <img class="ref-image" id="refImage" src="" alt="Ảnh đề bài" style="max-width: 480px; margin: 0 auto;" />
     <p style="color: var(--text-muted); font-size: 13px; margin-top: 12px;">Ghi nhớ kỹ chi tiết trước khi màn hình gập xuống!</p>
+    <div style="margin-top: 16px;">
+      <button type="button" class="ghost" onclick="startPracticeMode()" style="font-size: 13px; padding: 8px 16px;">
+        Mở ô nháp prompt sớm
+      </button>
+    </div>
   </div>
 
   <!-- 3. Prompting Block (Nhập prompt) -->
   <div id="promptBlock" class="panel" style="display:none;">
-    <div class="phase-tag">Soạn thảo prompt</div>
+    <div class="phase-tag" id="promptPhaseTag">Soạn thảo prompt</div>
     <h2 style="font-size: 18px; margin-bottom: 8px;">Nhập mô tả ảnh cho AI vẽ lại</h2>
     <label>Mô tả chi tiết bằng tiếng Việt hoặc tiếng Anh (Chỉ gửi 1 lần duy nhất):</label>
+    
+    <!-- Quick prompt pills -->
+    <div style="margin-bottom: 10px;">
+      <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 6px; font-family: var(--font-mono);">Mẫu gợi ý nhanh (Bấm để điền):</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+        <button type="button" class="preset-pill" onclick="fillPrompt('Một chú mèo phi hành gia lông vàng ngồi trong quán cafe ấm cúng phong cách 3D digital art sắc nét')">🐱 Mèo phi hành gia</button>
+        <button type="button" class="preset-pill" onclick="fillPrompt('Robot lập trình viên đang gõ code bên tách cà phê phát sáng phong cách cyberpunk neon')">🤖 Robot Cyberpunk</button>
+        <button type="button" class="preset-pill" onclick="fillPrompt('Lâu đài bay giữa những đám mây ngũ sắc lúc hoàng hôn phong cách Studio Ghibli anime')">🏰 Lâu đài Anime</button>
+      </div>
+    </div>
+
     <textarea id="promptInput" rows="5" placeholder="Ví dụ: Một chú mèo phi hành gia lông vàng ngồi trong quán cafe ấm cúng, tranh 3D kỹ thuật số chi tiết..."></textarea>
     <div class="char-count" id="charCount">0 ký tự</div>
 
-    <button class="primary" id="submitPrompt" style="width: 100%; font-size: 16px; padding: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
-      <span class="svg-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>
-      Gửi Prompt Cho AI Vẽ Ảnh
-    </button>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <button class="primary" id="submitPrompt" style="flex: 1; min-width: 200px; font-size: 16px; padding: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+        <span class="svg-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>
+        Gửi Prompt Cho AI Vẽ Ảnh
+      </button>
+      <button type="button" class="ghost" onclick="clearPrompt()" style="font-size: 13px; padding: 12px 16px;">
+        Xóa
+      </button>
+    </div>
   </div>
 
   <!-- 4. Wait Block (Đang chờ đối thủ / chờ AI sinh ảnh) -->
@@ -95,7 +128,15 @@
     <img src="/assets/buggy-thinking.png" alt="Buggy Thinking" style="width: 90px; height: 90px; margin-bottom: 14px;" />
     <div class="phase-tag" id="waitTag">Đang xử lý</div>
     <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;" id="waitTitle">Đã Gửi Prompt Thành Công!</h3>
-    <div class="status-line" id="waitText">Đang chờ AI tạo ảnh và giám khảo chấm điểm...</div>
+    <div class="status-line" id="waitText">Đang chờ đội đối thủ hoàn thành...</div>
+    <div style="display: flex; justify-content: center; gap: 10px; margin-top: 16px; flex-wrap: wrap;">
+      <button type="button" class="accent" id="btnEditPrompt" onclick="editPrompt()" style="font-size: 13px; font-weight: 600;">
+        ✏️ Chỉnh sửa lại prompt
+      </button>
+      <button type="button" class="ghost" onclick="checkConnection()" style="font-size: 13px;">
+        🔄 Làm mới trạng thái
+      </button>
+    </div>
   </div>
 
   <!-- 5. Result Block (Kết quả của đội mình) -->
@@ -106,10 +147,22 @@
       <img class="result-image" id="resultImage" src="" alt="Ảnh tạo ra" style="max-width: 420px; margin: 0 auto;" />
       <div class="score-big" id="resultScore">0 / 5.0</div>
       <div id="versusSummary" style="font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"></div>
-      <div class="reason" id="resultReason" style="font-size: 14px; max-width: 520px; margin: 8px auto 0;"></div>
+      <div class="reason" id="resultReason" style="font-size: 14px; max-width: 520px; margin: 8px auto 14px;"></div>
+      
+      <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="primary" onclick="show('idleBlock')" style="font-size: 14px; padding: 10px 20px;">
+          Sẵn Sàng Cho Vòng Kế Tiếp
+        </button>
+        <button type="button" class="ghost" onclick="startPracticeMode()" style="font-size: 13px; padding: 10px 16px;">
+          Tập Soạn Prompt Vòng Mới
+        </button>
+      </div>
     </div>
   </div>
 </div>
+
+<!-- Toast Container -->
+<div id="toast" class="toast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -130,6 +183,13 @@ promptInput.addEventListener('input', () => {
   charCount.textContent = `${promptInput.value.length} ký tự`;
 });
 
+promptInput.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('submitPrompt').click();
+  }
+});
+
 function show(id) {
   ['viewingBlock','promptBlock','waitBlock','resultBlock','idleBlock'].forEach(b => {
     const el = document.getElementById(b);
@@ -137,23 +197,89 @@ function show(id) {
   });
 }
 
+// Toast utility
+function showToast(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, duration);
+}
+
+function startPracticeMode() {
+  show('promptBlock');
+  const tag = document.getElementById('promptPhaseTag');
+  if (tag) tag.textContent = 'Chế độ soạn nháp / diễn tập';
+  promptInput.focus();
+  showToast('Đã mở ô soạn thảo prompt!');
+}
+
+function fillPrompt(sample) {
+  promptInput.value = sample;
+  charCount.textContent = `${sample.length} ký tự`;
+  promptInput.focus();
+  showToast('Đã điền gợi ý mẫu!');
+}
+
+function clearPrompt() {
+  promptInput.value = '';
+  charCount.textContent = '0 ký tự';
+  promptInput.focus();
+  showToast('Đã xóa nội dung prompt');
+}
+
+async function checkConnection() {
+  try {
+    const res = await fetch('/api/state');
+    if (res.ok) {
+      const data = await res.json();
+      render(data);
+      showToast('✅ Kết nối máy chủ tốt (Trạng thái: ' + data.phase.toUpperCase() + ')');
+    } else {
+      showToast('⚠️ Máy chủ phản hồi mã ' + res.status);
+    }
+  } catch (err) {
+    showToast('❌ Mất kết nối máy chủ: ' + err.message, 3500);
+  }
+}
+
+function editPrompt() {
+  hasSubmitted = false;
+  document.getElementById('submitPrompt').disabled = false;
+  show('promptBlock');
+  promptInput.focus();
+  showToast('Đã chuyển về ô chỉnh sửa prompt');
+}
+
 document.getElementById('submitPrompt').onclick = () => {
   const val = promptInput.value.trim();
-  if (!val || hasSubmitted) return;
-  hasSubmitted = true;
-  if (socket.connected) {
-    socket.emit('team:submitPrompt', { team, prompt: val });
-  } else {
-    fetch('/api/action', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'team:submitPrompt', payload: { team, prompt: val } })
-    }).catch(e => console.warn(e));
+  if (!val) {
+    promptInput.focus();
+    promptInput.style.borderColor = 'var(--accent)';
+    setTimeout(() => { promptInput.style.borderColor = ''; }, 2000);
+    showToast('⚠️ Vui lòng nhập mô tả prompt trước khi gửi!', 3000);
+    return;
   }
+  if (hasSubmitted) return;
+  hasSubmitted = true;
+
+  showToast('🚀 Đang gửi prompt cho AI vẽ ảnh...');
+  const payload = { team, prompt: val };
+  if (socket && socket.connected) {
+    socket.emit('team:submitPrompt', payload);
+  }
+  fetch('/api/action', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'team:submitPrompt', payload })
+  }).catch(e => console.warn(e));
+
   document.getElementById('submitPrompt').disabled = true;
   show('waitBlock');
   document.getElementById('waitTitle').textContent = 'Đã gửi prompt thành công!';
   document.getElementById('waitText').textContent = 'Đang chờ đội đối thủ hoàn thành...';
+  const btnEdit = document.getElementById('btnEditPrompt');
+  if (btnEdit) btnEdit.style.display = 'inline-block';
 };
 
 // Polling fallback khi chạy trên môi trường không có persistent websocket (Vercel)

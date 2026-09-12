@@ -278,9 +278,14 @@ button.danger:hover:not(:disabled) {
   color: #ffffff;
 }
 
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.5;
   cursor: not-allowed;
+  filter: grayscale(40%);
 }
 
 /* Phase Tag & Status */
