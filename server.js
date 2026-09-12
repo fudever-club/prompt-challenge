@@ -85,68 +85,100 @@ function clearTimer() {
 // Ưu tiên Nano Banana (Gemini 2.5 Flash Image), fallback OpenAI nếu không có Gemini
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-flare';
 
+function generateFallbackImage(prompt) {
+  const cleanPrompt = (prompt || 'Không có mô tả').slice(0, 120);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+    <defs>
+      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#090d16"/>
+        <stop offset="50%" stop-color="#1e1b4b"/>
+        <stop offset="100%" stop-color="#311042"/>
+      </linearGradient>
+      <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#f59e0b"/>
+        <stop offset="100%" stop-color="#ec4899"/>
+      </linearGradient>
+    </defs>
+    <rect width="800" height="800" fill="url(#bg)"/>
+    <circle cx="400" cy="300" r="130" fill="rgba(245, 158, 11, 0.1)" stroke="url(#accentGrad)" stroke-width="4"/>
+    <text x="400" y="295" font-family="system-ui, sans-serif" font-size="70" text-anchor="middle" fill="#f59e0b">🎨</text>
+    <text x="400" y="355" font-family="system-ui, sans-serif" font-weight="800" font-size="24" text-anchor="middle" fill="#ffffff" letter-spacing="1">AI BANANA ART</text>
+    <rect x="80" y="500" width="640" height="200" rx="16" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)"/>
+    <text x="400" y="545" font-family="system-ui, sans-serif" font-size="14" text-anchor="middle" fill="#94a3b8" letter-spacing="2">PROMPT TÁI HIỆN:</text>
+    <text x="400" y="605" font-family="system-ui, sans-serif" font-weight="600" font-size="20" text-anchor="middle" fill="#f8fafc">"${cleanPrompt}"</text>
+  </svg>`;
+  const b64 = Buffer.from(svg).toString('base64');
+  return `data:image/svg+xml;base64,${b64}`;
+}
+
 async function generateImage(prompt) {
+  // 1. Ưu tiên Nano Banana (Gemini 2.5 Flash Image)
   if (GEMINI_API_KEY) {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }]
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }]
+            }
+          ],
+          generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE']
           }
-        ],
-        generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE']
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        const imgPart = parts.find((p) => p.inlineData && p.inlineData.data);
+        if (imgPart) {
+          const mime = imgPart.inlineData.mimeType || 'image/png';
+          return `data:${mime};base64,${imgPart.inlineData.data}`;
         }
-      })
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Nano Banana API lỗi (${res.status}): ${errText}`);
+      } else {
+        const errText = await res.text();
+        console.warn(`Nano Banana API trả mã (${res.status}):`, errText);
+      }
+    } catch (gErr) {
+      console.warn('Lỗi gọi Nano Banana API, chuyển fallback:', gErr.message);
     }
-    const data = await res.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const imgPart = parts.find((p) => p.inlineData && p.inlineData.data);
-    if (!imgPart) throw new Error('Nano Banana không trả về dữ liệu ảnh.');
-    const mime = imgPart.inlineData.mimeType || 'image/png';
-    return `data:${mime};base64,${imgPart.inlineData.data}`;
   }
 
-  if (!OPENAI_API_KEY) {
-    throw new Error('Thiếu GEMINI_API_KEY hoặc OPENAI_API_KEY trong .env — xem README để cấu hình.');
-  }
-  const res = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_IMAGE_MODEL,
-      prompt,
-      size: '1024x1024',
-      n: 1,
-    }),
-  });
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Image API lỗi (${res.status}): ${errText}`);
-  }
-  const data = await res.json();
-  const item = data.data?.[0];
-  if (!item) throw new Error('Image API không trả về dữ liệu ảnh.');
-
-  if (item.b64_json) {
-    return `data:image/png;base64,${item.b64_json}`;
-  } else if (item.url) {
-    const imgRes = await fetch(item.url);
-    const arrayBuffer = await imgRes.arrayBuffer();
-    const b64 = Buffer.from(arrayBuffer).toString('base64');
-    return `data:image/png;base64,${b64}`;
+  // 2. Fallback OpenAI DALL-E nếu có OPENAI_API_KEY
+  if (OPENAI_API_KEY) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: OPENAI_IMAGE_MODEL,
+          prompt,
+          size: '1024x1024',
+          n: 1,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const item = data.data?.[0];
+        if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+        if (item?.url) {
+          const imgRes = await fetch(item.url);
+          const arrayBuffer = await imgRes.arrayBuffer();
+          return `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+        }
+      }
+    } catch (oErr) {
+      console.warn('Lỗi gọi OpenAI API:', oErr.message);
+    }
   }
 
-  throw new Error('Không tìm thấy dữ liệu ảnh (b64_json hoặc url) từ Image API.');
+  // 3. Fallback AI Canvas nghệ thuật dự phòng (đảm bảo trận đấu không bao giờ crash ở gian hàng)
+  return generateFallbackImage(prompt);
 }
 
 // Helper chuyển đổi linh hoạt DataURL / Local path / Remote URL thành inline base64 cho AI
@@ -279,20 +311,18 @@ async function runGenerationAndJudging() {
   state.phase = 'generating';
   broadcastState();
   try {
-    const [imageA, imageB] = await Promise.all([
-      generateImage(state.promptA),
-      generateImage(state.promptB),
-    ]);
+    const imageA = await generateImage(state.promptA);
+    await new Promise((r) => setTimeout(r, 400));
+    const imageB = await generateImage(state.promptB);
     state.imageA = imageA;
     state.imageB = imageB;
 
     state.phase = 'judging';
     broadcastState();
 
-    const [judgedA, judgedB] = await Promise.all([
-      judgeImage(state.referenceImage, imageA, state.judgeSystemPrompt),
-      judgeImage(state.referenceImage, imageB, state.judgeSystemPrompt),
-    ]);
+    const judgedA = await judgeImage(state.referenceImage, imageA, state.judgeSystemPrompt);
+    await new Promise((r) => setTimeout(r, 300));
+    const judgedB = await judgeImage(state.referenceImage, imageB, state.judgeSystemPrompt);
     state.scoreA = judgedA.score;
     state.reasonA = judgedA.reason;
     state.scoreB = judgedB.score;

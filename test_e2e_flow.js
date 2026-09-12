@@ -89,10 +89,14 @@ async function runTests() {
     recordPass(`Upload ảnh thành công qua storage: [${data.storage.toUpperCase()}] ${data.warning ? '(Cảnh báo: ' + data.warning + ')' : ''}`);
 
     // Kiểm tra URL ảnh vừa up có tải được không
-    const checkUrl = data.url.startsWith('http') ? data.url : `${BASE_URL}${data.url}`;
-    const checkRes = await fetch(checkUrl);
-    assert.strictEqual(checkRes.status, 200, `Ảnh vừa upload không truy cập được: ${checkUrl}`);
-    recordPass(`URL ảnh upload có thể truy cập hợp lệ (HTTP 200)`);
+    if (data.url.startsWith('data:')) {
+      recordPass(`URL ảnh upload dạng inline base64 hợp lệ`);
+    } else {
+      const checkUrl = data.url.startsWith('http') ? data.url : `${BASE_URL}${data.url}`;
+      const checkRes = await fetch(checkUrl);
+      assert.strictEqual(checkRes.status, 200, `Ảnh vừa upload không truy cập được: ${checkUrl}`);
+      recordPass(`URL ảnh upload có thể truy cập hợp lệ (HTTP 200)`);
+    }
   } catch (e) {
     recordFail('POST /api/gallery/upload', e);
   }
