@@ -190,8 +190,9 @@
 
     <!-- Hộp ảnh Đề Bài Gốc để đối chiếu trực quan -->
     <div class="results-ref-bar">
-      <div style="font-size: 13px; color: var(--accent); font-family: var(--font-mono); font-weight: 700; text-transform: uppercase;">
-        🎯 Ảnh Đề Bài Gốc (Reference Benchmark)
+      <div style="font-size: 13px; color: var(--accent); font-family: var(--font-mono); font-weight: 700; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px;">
+        <span class="svg-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
+        Ảnh Đề Bài Gốc (Reference Benchmark)
       </div>
       <img class="results-ref-img" id="resultRefImg" src="" alt="Ảnh Đề Bài Gốc" />
     </div>
@@ -202,7 +203,7 @@
         <div class="team-result-badge" id="badgeResultA"></div>
         <div class="name" id="nameA" style="font-size: 22px;">Đội A</div>
         <img class="result-image" id="imageA" src="" alt="Ảnh Đội A" />
-        <div class="score-big" id="scoreA">0 ★</div>
+        <div class="score-big" id="scoreA">0 / 5.0</div>
         <div class="reason" id="reasonA" style="font-size: 14px; text-align: left; margin-top: 10px;"></div>
         <div id="promptQuoteA" style="font-size: 12px; color: var(--text-dim); margin-top: 8px; font-family: var(--font-mono); text-align: left;"></div>
       </div>
@@ -210,7 +211,7 @@
         <div class="team-result-badge" id="badgeResultB"></div>
         <div class="name" id="nameB" style="font-size: 22px;">Đội B</div>
         <img class="result-image" id="imageB" src="" alt="Ảnh Đội B" />
-        <div class="score-big" id="scoreB">0 ★</div>
+        <div class="score-big" id="scoreB">0 / 5.0</div>
         <div class="reason" id="reasonB" style="font-size: 14px; text-align: left; margin-top: 10px;"></div>
         <div id="promptQuoteB" style="font-size: 12px; color: var(--text-dim); margin-top: 8px; font-family: var(--font-mono); text-align: left;"></div>
       </div>
@@ -221,6 +222,9 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
+
+const checkIcon = '<span class="svg-icon" style="color: var(--success); margin-right: 4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>';
+const trophyIcon = '<span class="svg-icon" style="margin-right: 5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H7v2h10v-2h-2c-.55 0-1-.45-1-1v-2.34c3.2-1.02 5.5-4 5.5-7.66V3H4.5v4c0 3.66 2.3 6.64 5.5 7.66z"/></svg></span>';
 
 function show(id) {
   ['idleBlock','viewingBlock','promptingBlock','processingBlock','resultsBlock'].forEach(b => {
@@ -246,8 +250,8 @@ function render(s) {
     show('promptingBlock');
     document.getElementById('nameAWait').textContent = s.teamAName;
     document.getElementById('nameBWait').textContent = s.teamBName;
-    document.getElementById('statusA').textContent = s.submittedA ? '✓ Đã hoàn thành prompt' : 'Đang nhập prompt...';
-    document.getElementById('statusB').textContent = s.submittedB ? '✓ Đã hoàn thành prompt' : 'Đang nhập prompt...';
+    document.getElementById('statusA').innerHTML = s.submittedA ? `${checkIcon} Đã gửi prompt` : 'Đang nhập prompt...';
+    document.getElementById('statusB').innerHTML = s.submittedB ? `${checkIcon} Đã gửi prompt` : 'Đang nhập prompt...';
     return;
   }
 
@@ -265,8 +269,8 @@ function render(s) {
     document.getElementById('nameB').textContent = s.teamBName;
     document.getElementById('imageA').src = s.imageA || '';
     document.getElementById('imageB').src = s.imageB || '';
-    document.getElementById('scoreA').textContent = `${s.scoreA} ★`;
-    document.getElementById('scoreB').textContent = `${s.scoreB} ★`;
+    document.getElementById('scoreA').textContent = `${s.scoreA} / 5.0`;
+    document.getElementById('scoreB').textContent = `${s.scoreB} / 5.0`;
     document.getElementById('reasonA').textContent = s.reasonA || '';
     document.getElementById('reasonB').textContent = s.reasonB || '';
     document.getElementById('resultRefImg').src = s.referenceImage || '';
@@ -277,19 +281,19 @@ function render(s) {
     const badgeB = document.getElementById('badgeResultB');
     if (s.scoreA > s.scoreB) {
       badgeA.className = 'team-result-badge badge-win';
-      badgeA.textContent = '🏆 CHIẾN THẮNG';
+      badgeA.innerHTML = `${trophyIcon} CHIẾN THẮNG`;
       badgeB.className = 'team-result-badge badge-lose';
-      badgeB.textContent = '👏 HOÀN THÀNH TỐT';
+      badgeB.textContent = 'HOÀN THÀNH TỐT';
     } else if (s.scoreB > s.scoreA) {
       badgeB.className = 'team-result-badge badge-win';
-      badgeB.textContent = '🏆 CHIẾN THẮNG';
+      badgeB.innerHTML = `${trophyIcon} CHIẾN THẮNG`;
       badgeA.className = 'team-result-badge badge-lose';
-      badgeA.textContent = '👏 HOÀN THÀNH TỐT';
+      badgeA.textContent = 'HOÀN THÀNH TỐT';
     } else {
       badgeA.className = 'team-result-badge badge-tie';
-      badgeA.textContent = '🤝 HÒA NHAU';
+      badgeA.textContent = 'HÒA NHAU';
       badgeB.className = 'team-result-badge badge-tie';
-      badgeB.textContent = '🤝 HÒA NHAU';
+      badgeB.textContent = 'HÒA NHAU';
     }
   }
 }

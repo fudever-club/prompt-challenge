@@ -56,7 +56,10 @@
 
       <div class="mascot-hint" style="background: var(--bg); text-align: left;">
         <div>
-          <div style="font-weight: 700; font-size: 13px; color: var(--text); margin-bottom: 4px;">💡 Mẹo prompt cho đội bạn:</div>
+          <div style="font-weight: 700; font-size: 13px; color: var(--text); margin-bottom: 4px; display: inline-flex; align-items: center; gap: 6px;">
+            <span class="svg-icon" style="color: var(--accent);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+            Gợi ý chiến thuật viết prompt:
+          </div>
           <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
             Khi được xem ảnh, hãy phân công người nhớ chủ thể chính, người nhớ màu sắc và bối cảnh. Càng chi tiết về phong cách (3D, anime, tranh sơn dầu...) AI vẽ càng sát!
           </div>
@@ -81,8 +84,9 @@
     <textarea id="promptInput" rows="5" placeholder="Ví dụ: Một chú mèo phi hành gia lông vàng ngồi trong quán cafe ấm cúng, tranh 3D kỹ thuật số chi tiết..."></textarea>
     <div class="char-count" id="charCount">0 ký tự</div>
 
-    <button class="primary" id="submitPrompt" style="width: 100%; font-size: 16px; padding: 14px;">
-      🚀 Gửi Prompt Cho AI Vẽ Ảnh
+    <button class="primary" id="submitPrompt" style="width: 100%; font-size: 16px; padding: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+      <span class="svg-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>
+      Gửi Prompt Cho AI Vẽ Ảnh
     </button>
   </div>
 
@@ -100,7 +104,7 @@
     <div style="text-align: center; margin-bottom: 16px;">
       <div id="teamWinStatus" style="font-size: 20px; font-weight: 800; margin-bottom: 12px;"></div>
       <img class="result-image" id="resultImage" src="" alt="Ảnh tạo ra" style="max-width: 420px; margin: 0 auto;" />
-      <div class="score-big" id="resultScore">0 ★</div>
+      <div class="score-big" id="resultScore">0 / 5.0</div>
       <div id="versusSummary" style="font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"></div>
       <div class="reason" id="resultReason" style="font-size: 14px; max-width: 520px; margin: 8px auto 0;"></div>
     </div>
@@ -219,17 +223,18 @@ function render(s) {
     const reason = isA ? s.reasonA : s.reasonB;
 
     document.getElementById('resultImage').src = img || '';
-    document.getElementById('resultScore').textContent = `${myScore} ★`;
+    document.getElementById('resultScore').textContent = `${myScore} / 5.0`;
     document.getElementById('resultReason').textContent = reason || '';
-    document.getElementById('versusSummary').textContent = `Tỷ số: Bạn (${myScore} ★) vs ${oppName} (${oppScore} ★)`;
+    document.getElementById('versusSummary').textContent = `Tỷ số: Bạn (${myScore}) vs ${oppName} (${oppScore})`;
 
     const winStatus = document.getElementById('teamWinStatus');
+    const trophySvg = '<span class="svg-icon" style="margin-right: 6px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H7v2h10v-2h-2c-.55 0-1-.45-1-1v-2.34c3.2-1.02 5.5-4 5.5-7.66V3H4.5v4c0 3.66 2.3 6.64 5.5 7.66z"/></svg></span>';
     if (myScore > oppScore) {
-      winStatus.innerHTML = '<span style="color: var(--success);">🏆 XUẤT SẮC! ĐỘI BẠN ĐÃ CHIẾN THẮNG!</span>';
+      winStatus.innerHTML = `<span style="color: var(--success); display: inline-flex; align-items: center; justify-content: center;">${trophySvg} CHIẾN THẮNG TRẬN NÀY!</span>`;
     } else if (myScore < oppScore) {
-      winStatus.innerHTML = '<span style="color: var(--text-dim);">👏 HOÀN THÀNH TỐT! ĐỐI THỦ ĐÃ DẪN ĐIỂM.</span>';
+      winStatus.innerHTML = '<span style="color: var(--text-dim);">HOÀN THÀNH TỐT — ĐỐI THỦ DẪN ĐIỂM</span>';
     } else {
-      winStatus.innerHTML = '<span style="color: var(--accent);">🤝 HAI ĐỘI HÒA NHAU!</span>';
+      winStatus.innerHTML = '<span style="color: var(--accent);">HAI ĐỘI HÒA NHAU</span>';
     }
     return;
   }
