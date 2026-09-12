@@ -210,21 +210,30 @@ function startPracticeMode() {
   show('promptBlock');
   const tag = document.getElementById('promptPhaseTag');
   if (tag) tag.textContent = 'Chế độ soạn nháp / diễn tập';
-  promptInput.focus();
+  const el = document.getElementById('promptInput');
+  if (el) el.focus();
   showToast('Đã mở ô soạn thảo prompt!');
 }
 
 function fillPrompt(sample) {
-  promptInput.value = sample;
-  charCount.textContent = `${sample.length} ký tự`;
-  promptInput.focus();
+  const el = document.getElementById('promptInput');
+  const countEl = document.getElementById('charCount');
+  if (el) {
+    el.value = sample;
+    if (countEl) countEl.textContent = `${sample.length} ký tự`;
+    el.focus();
+  }
   showToast('Đã điền gợi ý mẫu!');
 }
 
 function clearPrompt() {
-  promptInput.value = '';
-  charCount.textContent = '0 ký tự';
-  promptInput.focus();
+  const el = document.getElementById('promptInput');
+  const countEl = document.getElementById('charCount');
+  if (el) {
+    el.value = '';
+    if (countEl) countEl.textContent = '0 ký tự';
+    el.focus();
+  }
   showToast('Đã xóa nội dung prompt');
 }
 
