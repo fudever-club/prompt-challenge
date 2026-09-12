@@ -318,6 +318,13 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
+  socket.on('btc:adjustTimer', ({ delta }) => {
+    if (state.phase === 'viewing') {
+      state.secondsLeft = Math.max(0, state.secondsLeft + (Number(delta) || 0));
+      broadcastState();
+    }
+  });
+
   socket.on('team:submitPrompt', ({ team, prompt }) => {
     if (state.phase !== 'prompting') return;
     if (team === 'A' && !state.submittedA) {
@@ -359,9 +366,22 @@ io.on('connection', (socket) => {
   });
 });
 
+// ---- Admin Authentication ----
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'dever2026';
+
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body || {};
+  if (password === ADMIN_PASSWORD) {
+    const token = Buffer.from('dever_admin_session_' + Date.now()).toString('base64');
+    return res.json({ success: true, token });
+  }
+  return res.status(401).json({ success: false, error: 'Mật khẩu không chính xác' });
+});
+
 // ---- REST API (Hỗ trợ Vercel polling & Gallery) ----
 app.get('/api/state', (req, res) => res.json(state));
 app.get('/api/leaderboard', (req, res) => res.json(leaderboard));
+
 
 // Lấy danh sách ảnh Gallery (kết hợp mẫu có sẵn, ảnh upload local, và Supabase Storage)
 app.get('/api/gallery', async (req, res) => {
@@ -506,6 +526,10 @@ app.post('/api/action', (req, res) => {
   } else if (action === 'btc:collapseNow') {
     clearTimer();
     state.phase = 'prompting';
+  } else if (action === 'btc:adjustTimer') {
+    if (state.phase === 'viewing') {
+      state.secondsLeft = Math.max(0, state.secondsLeft + (Number(payload?.delta) || 0));
+    }
   } else if (action === 'team:submitPrompt') {
     const { team, prompt } = payload || {};
     if (state.phase === 'prompting') {

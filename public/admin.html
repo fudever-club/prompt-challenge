@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prompt Challenge — Bàn Quản Trị Admin</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Security Login Overlay */
+    .login-overlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 85vh;
+      padding: 24px;
+    }
+    .login-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-line);
+      border-radius: 12px;
+      padding: 40px 36px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+    .login-card .shield-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      background: var(--accent-muted);
+      border: 1px solid var(--accent-border);
+      margin-bottom: 20px;
+      letter-spacing: 0.05em;
+    }
+    .login-logos {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    .login-logos img.dever { height: 40px; }
+    .login-logos img.fptu { height: 32px; opacity: 0.85; }
+    .login-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      margin-bottom: 6px;
+    }
+    .login-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .input-group-pwd {
+      position: relative;
+      margin-bottom: 18px;
+    }
+    .input-group-pwd input {
+      width: 100%;
+      font-size: 15px;
+      background-color: var(--bg) !important;
+      border: 1px solid var(--panel-line) !important;
+      color: var(--text) !important;
+      border-radius: 6px;
+      padding: 12px 44px 12px 14px;
+      transition: all 0.15s ease;
+    }
+    .input-group-pwd input:focus {
+      outline: none;
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+    }
+    .pwd-toggle {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px 8px;
+      font-size: 16px;
+      border-radius: 4px;
+    }
+    .pwd-toggle:hover { color: var(--text); }
+    .login-error {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      display: none;
+      text-align: left;
+    }
+    .shake {
+      animation: shake 0.35s ease-in-out;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    /* Admin Dashboard */
+    .admin-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .admin-nav-actions a, .admin-nav-actions button {
+      font-size: 12px;
+      padding: 6px 12px;
+      text-decoration: none;
+    }
+
+    /* Telemetry Info Bar */
+    .telemetry-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 20px;
+      background: var(--panel);
+      border: 1px solid var(--panel-line);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .telemetry-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .telemetry-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    .telemetry-dot.amber { background: var(--accent); }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 900px) {
+      .admin-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Timer Controls */
+    .timer-badge-lg {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--bg);
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--panel-line);
+    }
+    .timer-adjust-btn {
+      padding: 4px 8px;
+      font-size: 12px;
+      background: var(--panel-elevated);
+      border: 1px solid var(--panel-line);
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .timer-adjust-btn:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    /* Quick Preset Pills */
+    .preset-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .preset-pill {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      background: var(--bg);
+      border: 1px solid var(--panel-line);
+      color: var(--text-dim);
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .preset-pill:hover {
+      color: var(--text);
+      border-color: var(--panel-line-hover);
+    }
+
+    /* Live Prompt Monitor */
+    .prompt-monitor-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .prompt-monitor-card {
+      background: var(--bg);
+      border: 1px solid var(--panel-line);
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .prompt-monitor-card.a { border-left: 3px solid var(--team-a); }
+    .prompt-monitor-card.b { border-left: 3px solid var(--team-b); }
+    .prompt-monitor-status {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .badge-submitted {
+      color: var(--success);
+      font-weight: 700;
+    }
+    .badge-waiting {
+      color: var(--text-dim);
+    }
+
+    /* Active Reference Preview Card */
+    .current-ref-box {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--bg);
+      border: 1px solid var(--panel-line);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+    .current-ref-thumb {
+      width: 54px;
+      height: 54px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid var(--panel-line);
+      background: #000;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--panel-elevated);
+      border: 1px solid var(--accent);
+      color: var(--text);
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 9999;
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 1. MÀN HÌNH KHÓA BẢO MẬT (KHI CHƯA ĐĂNG NHẬP) -->
+<div id="loginScreen" class="login-overlay">
+  <div class="login-card" id="loginCard">
+    <div class="shield-badge">🔒 BTC SECURITY ACCESS</div>
+    
+    <div class="login-logos">
+      <img class="dever" src="/assets/logo-dever-white.png" alt="FU-DEVER Logo" />
+      <img class="fptu" src="/assets/logo-fptu.png" alt="FPT University Logo" />
+    </div>
+
+    <div class="login-title">BÀN QUẢN TRỊ ADMIN</div>
+    <div class="login-subtitle">
+      Hệ thống vận hành Prompt Challenge tại gian hàng Club Day.<br>
+      Vui lòng nhập mật khẩu xác thực của Ban Tổ Chức.
+    </div>
+
+    <div class="login-error" id="loginError">Mật khẩu không chính xác. Vui lòng thử lại!</div>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="input-group-pwd">
+        <input type="password" id="adminPass" placeholder="Nhập mật khẩu BTC..." required autofocus />
+        <button type="button" class="pwd-toggle" id="pwdToggle" onclick="togglePasswordVisibility()" title="Ẩn/hiện mật khẩu">👁️</button>
+      </div>
+      <button type="submit" class="accent" id="btnLoginSubmit" style="width: 100%; font-size: 15px; padding: 12px; font-weight: 700;">
+        Mở Khóa Bàn Điều Khiển &rarr;
+      </button>
+    </form>
+    <div style="margin-top: 18px; font-size: 11px; color: var(--text-dim); font-family: var(--font-mono);">
+      FU-DEVER Club • FPT University Da Nang
+    </div>
+  </div>
+</div>
+
+<!-- 2. GIAO DIỆN MASTER ADMIN CONSOLE (KHI ĐÃ XÁC THỰC) -->
+<div id="adminDashboard" class="wrap" style="display: none;">
+  <!-- Header & Quick View Links -->
+  <div class="masthead">
+    <div class="brand-group">
+      <div class="brand-logos">
+        <img class="logo-dever" src="/assets/logo-dever-white.png" alt="FU-DEVER Logo" />
+        <img class="logo-fptu" src="/assets/logo-fptu.png" alt="FPT University Logo" />
+      </div>
+      <div class="brand-divider"></div>
+      <div class="brand-title-area">
+        <div class="brand-title">PROMPT <span>CHALLENGE</span></div>
+        <div class="brand-subtitle">Trung Tâm Quản Trị • Ban Tổ Chức</div>
+      </div>
+    </div>
+    <div class="admin-nav-actions">
+      <a href="/display.html" target="_blank" class="role-badge" style="background: var(--panel); border-color: var(--panel-line); color: var(--text-muted);">
+        🖥️ Khán Giả (TV)
+      </a>
+      <a href="/team.html?team=A" target="_blank" class="role-badge team-a">
+        📱 Đội A
+      </a>
+      <a href="/team.html?team=B" target="_blank" class="role-badge team-b">
+        📱 Đội B
+      </a>
+      <button class="ghost" onclick="handleLogout()" style="padding: 6px 12px; font-size: 12px; border-color: var(--panel-line);">
+        Đăng xuất
+      </button>
+    </div>
+  </div>
+
+  <!-- Telemetry Bar -->
+  <div class="telemetry-bar">
+    <div class="telemetry-item">
+      <div class="telemetry-dot" id="socketDot"></div>
+      <span id="socketLabel">Thời gian thực: <strong>Socket Online</strong></span>
+    </div>
+    <div class="telemetry-item">
+      <div class="telemetry-dot"></div>
+      <span>Image Gen: <strong>Nano Banana (Gemini 2.5)</strong></span>
+    </div>
+    <div class="telemetry-item">
+      <div class="telemetry-dot"></div>
+      <span>Judge: <strong>Gemini Flash Multimodal</strong></span>
+    </div>
+    <div class="telemetry-item">
+      <div class="telemetry-dot" style="background: var(--team-a);"></div>
+      <span>Storage: <strong>Supabase Cloud</strong></span>
+    </div>
+    <div class="telemetry-item" style="margin-left: auto;">
+      <span>LAN: <code id="lanText" style="color: var(--accent); cursor: pointer;" onclick="copyLanUrl()" title="Bấm để copy">192.168.1.18:3000</code></span>
+    </div>
+  </div>
+
+  <div class="admin-grid">
+    <!-- PANEL 1: CẤU HÌNH 2 ĐỘI THI -->
+    <div class="panel">
+      <h2>1. Thiết Lập 2 Đội Thi</h2>
+      <div class="grid-2">
+        <div>
+          <label>Tên Đội A</label>
+          <input type="text" id="teamAName" placeholder="Nhập tên Đội A" />
+        </div>
+        <div>
+          <label>Tên Đội B</label>
+          <input type="text" id="teamBName" placeholder="Nhập tên Đội B" />
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; flex-wrap: wrap; gap: 8px;">
+        <button class="primary" id="saveTeams">Lưu Tên Đội</button>
+        <div class="preset-pills">
+          <span class="preset-pill" onclick="setTeamPreset('K18 SE', 'K19 SE')">K18 vs K19</span>
+          <span class="preset-pill" onclick="setTeamPreset('DEVER Dev', 'DEVER Design')">Dev vs Design</span>
+          <span class="preset-pill" onclick="setTeamPreset('Alpha', 'Beta')">Alpha vs Beta</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 2: KHO ĐỀ BÀI & SUPABASE GALLERY -->
+    <div class="panel">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <h2 style="margin-bottom: 0;">2. Thư Viện Đề Bài (Gallery)</h2>
+        <button class="ghost" onclick="loadGallery()" style="padding: 4px 10px; font-size: 12px;">↻ Làm mới</button>
+      </div>
+
+      <!-- Đề bài hiện tại đang chọn -->
+      <div class="current-ref-box">
+        <img id="currentRefThumb" class="current-ref-thumb" src="/assets/buggy-thinking.png" alt="Ảnh đề bài" />
+        <div style="font-size: 12px;">
+          <div style="color: var(--text-dim); margin-bottom: 2px;">Đề bài đang nạp:</div>
+          <div id="currentRefTitle" style="font-weight: 700; color: var(--text);">Chưa chọn ảnh</div>
+        </div>
+      </div>
+
+      <label>Chọn từ kho ảnh (Mẫu + Supabase Storage):</label>
+      <div class="preset-gallery" id="presetGallery" style="max-height: 160px; overflow-y: auto; padding-right: 4px;">
+        <div style="color: var(--text-dim); font-size: 12px;">Đang tải gallery...</div>
+      </div>
+
+      <label style="margin-top: 10px;">Hoặc tải ảnh mới (Lưu tự động vào Supabase Cloud):</label>
+      <input type="file" id="refFile" accept="image/*" />
+      <div class="status-line" id="uploadStatus" style="margin-bottom: 0; font-size: 12px;"></div>
+    </div>
+  </div>
+
+  <!-- PANEL 3: ĐIỀU KHIỂN VÒNG ĐẤU -->
+  <div class="panel">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <h2>3. Điều Khiển Vòng Đấu</h2>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+          <div class="phase-tag" id="phaseTag">idle</div>
+          <span style="font-size: 13px; color: var(--text-dim);">Vòng: <strong id="roundNumber" style="color: var(--text);">1</strong></span>
+        </div>
+        <div class="status-line" id="statusLine">Đang chờ thiết lập ảnh đề bài để bắt đầu...</div>
+      </div>
+
+      <!-- Countdown Timer Box -->
+      <div id="timerContainer" style="display: flex; align-items: center; gap: 8px;">
+        <div class="timer-badge-lg" id="adminTimerBadge" style="display: none;">
+          <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Còn:</span>
+          <span id="adminTimerSecs">60</span>s
+        </div>
+        <div id="timerAdjustGroup" style="display: none;">
+          <button class="timer-adjust-btn" onclick="adjustTimer(15)" title="Cộng thêm 15 giây">+15s</button>
+          <button class="timer-adjust-btn" onclick="adjustTimer(-15)" title="Giảm 15 giây">-15s</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cài đặt thời gian xem ảnh -->
+    <div style="margin: 12px 0 10px; display: flex; align-items: center; gap: 10px;">
+      <label style="margin-bottom: 0;">Thời gian xem ảnh (giây):</label>
+      <input type="number" id="viewSeconds" value="60" min="10" max="180" style="max-width: 100px; padding: 6px 10px;" />
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+      <button class="accent" id="startViewing" style="font-size: 15px; padding: 12px 24px; font-weight: 700;">
+        ▶ Bắt Đầu Vòng (Xem Đề Bài)
+      </button>
+      <button class="primary" id="collapseNow" style="background: #334155; border-color: #475569; font-size: 15px; padding: 12px 20px; font-weight: 700;">
+        ⏬ Gập Xuống (Bắt Đầu Viết Prompt)
+      </button>
+      <button class="ghost" id="forceGenerate" style="color: var(--accent);">
+        ⚡ Ép Tạo Ảnh Dù Thiếu Prompt
+      </button>
+      <button class="ghost" id="resetRound">
+        ↺ Reset Vòng Này
+      </button>
+    </div>
+
+    <!-- PANEL 4: GIÁM SÁT TIẾN TRÌNH 2 ĐỘI NHẬP PROMPT -->
+    <div class="prompt-monitor-grid">
+      <div class="prompt-monitor-card a">
+        <div class="prompt-monitor-status">
+          <span style="color: var(--team-a); font-weight: 700;" id="monitorNameA">Đội A</span>
+          <span id="monitorStatusA" class="badge-waiting">Đang chờ...</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted); font-family: var(--font-mono);" id="monitorDetailA">
+          Chưa nộp prompt
+        </div>
+      </div>
+      <div class="prompt-monitor-card b">
+        <div class="prompt-monitor-status">
+          <span style="color: var(--team-b); font-weight: 700;" id="monitorNameB">Đội B</span>
+          <span id="monitorStatusB" class="badge-waiting">Đang chờ...</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted); font-family: var(--font-mono);" id="monitorDetailB">
+          Chưa nộp prompt
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL KẾT QUẢ VÁN ĐẤU -->
+  <div class="panel" id="resultsPanel" style="display:none;">
+    <h2>Kết Quả Trận Đấu Vừa Rồi</h2>
+    <div class="grid-2" id="resultsGrid"></div>
+  </div>
+
+  <!-- PANEL BÁO LỖI NẾU CÓ -->
+  <div class="panel" id="errorPanel" style="display:none; border-color: var(--danger);">
+    <div style="color: #fca5a5; font-size: 14px;" id="errorBox"></div>
+  </div>
+
+  <!-- PANEL 5: BẢNG XẾP HẠNG TOÀN GIAN HÀNG -->
+  <div class="panel">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h2 style="margin-bottom: 0;">4. Bảng Xếp Hạng Toàn Gian Hàng</h2>
+      <button class="danger" id="resetLeaderboard" style="font-size: 11px; padding: 5px 10px;">Xóa Toàn Bộ BXH</button>
+    </div>
+    <table class="leaderboard" id="leaderboardTable">
+      <thead>
+        <tr>
+          <th>Hạng</th>
+          <th>Tên Đội</th>
+          <th>Tổng Điểm</th>
+          <th>Số Ván</th>
+          <th>Điểm TB</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- PANEL 6: CẤU HÌNH TIÊU CHÍ GIÁM KHẢO GEMINI -->
+  <div class="panel">
+    <h2>5. Cấu hình Prompt Chấm Điểm (Gemini Flash Multimodal)</h2>
+    <textarea id="judgePrompt" rows="4"></textarea>
+    <div style="display: flex; gap: 10px; margin-top: 8px;">
+      <button class="ghost" id="saveJudgePrompt">Lưu Tiêu Chí</button>
+      <button class="ghost" onclick="resetJudgePromptDefault()" style="color: var(--text-dim);">Khôi phục mặc định</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification box -->
+<div id="toast" class="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// Toast utility
+function showToast(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, duration);
+}
+
+// Password toggle
+function togglePasswordVisibility() {
+  const inp = document.getElementById('adminPass');
+  const btn = document.getElementById('pwdToggle');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🔒';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁️';
+  }
+}
+
+// Copy LAN URL
+function copyLanUrl() {
+  const text = document.getElementById('lanText').textContent;
+  navigator.clipboard.writeText('http://' + text);
+  showToast('✓ Đã copy link LAN: http://' + text);
+}
+
+// Team presets helper
+function setTeamPreset(a, b) {
+  document.getElementById('teamAName').value = a;
+  document.getElementById('teamBName').value = b;
+  sendAction('btc:setTeams', { teamAName: a, teamBName: b });
+  showToast(`✓ Đã đặt: ${a} vs ${b}`);
+}
+
+// Authentication
+async function handleLogin(e) {
+  e.preventDefault();
+  const pass = document.getElementById('adminPass').value;
+  const errorEl = document.getElementById('loginError');
+  const card = document.getElementById('loginCard');
+  const submitBtn = document.getElementById('btnLoginSubmit');
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Đang xác thực...';
+
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pass })
+    });
+    const data = await res.json();
+    if (data.success) {
+      sessionStorage.setItem('dever_admin_token', data.token);
+      showDashboard();
+    } else {
+      errorEl.style.display = 'block';
+      errorEl.textContent = data.error || 'Mật khẩu quản trị không chính xác!';
+      card.classList.add('shake');
+      setTimeout(() => card.classList.remove('shake'), 400);
+    }
+  } catch (err) {
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Lỗi kết nối máy chủ: ' + err.message;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Mở Khóa Bàn Điều Khiển →';
+  }
+}
+
+function handleLogout() {
+  sessionStorage.removeItem('dever_admin_token');
+  document.getElementById('adminDashboard').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('adminPass').value = '';
+}
+
+function showDashboard() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminDashboard').style.display = 'block';
+  loadGallery();
+}
+
+// Auto-login if session exists
+if (sessionStorage.getItem('dever_admin_token')) {
+  showDashboard();
+}
+
+// Admin Operations & Socket
+const socket = io();
+let currentState = null;
+
+// Telemetry state
+socket.on('connect', () => {
+  document.getElementById('socketDot').className = 'telemetry-dot';
+  document.getElementById('socketLabel').innerHTML = 'Thời gian thực: <strong>Socket Online</strong>';
+});
+socket.on('disconnect', () => {
+  document.getElementById('socketDot').className = 'telemetry-dot amber';
+  document.getElementById('socketLabel').innerHTML = 'Thời gian thực: <strong>Polling Fallback</strong>';
+});
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function sendAction(action, payload = {}) {
+  if (socket.connected) {
+    socket.emit(action, payload);
+  } else {
+    fetch('/api/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, payload })
+    }).then(r => r.json()).then(d => {
+      if (d.state) render(d.state);
+      if (d.leaderboard) renderLeaderboard(d.leaderboard);
+    }).catch(e => console.warn(e));
+  }
+}
+
+// Gallery loader
+async function loadGallery() {
+  const container = document.getElementById('presetGallery');
+  try {
+    const res = await fetch('/api/gallery');
+    const data = await res.json();
+    const items = data.gallery || [];
+    if (items.length === 0) {
+      container.innerHTML = '<div style="color: var(--text-dim); font-size: 12px; padding: 10px;">Chưa có ảnh trong kho. Hãy upload ảnh bên dưới!</div>';
+      return;
+    }
+    container.innerHTML = items.map(item => `
+      <div class="preset-card" onclick="selectPreset('${item.url}', '${item.title}')" title="${item.title} (${item.source})">
+        <img src="${item.url}" alt="${item.title}" loading="lazy" />
+        <div class="title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    container.innerHTML = '<div style="color: var(--danger); font-size: 12px; padding: 10px;">Không tải được gallery.</div>';
+  }
+}
+
+async function selectPreset(url, title) {
+  document.getElementById('uploadStatus').textContent = 'Đang nạp ảnh...';
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const dataUrl = await fileToDataUrl(blob);
+    sendAction('btc:uploadReference', dataUrl);
+    document.getElementById('currentRefThumb').src = url;
+    document.getElementById('currentRefTitle').textContent = title || 'Ảnh Đề Bài';
+    document.getElementById('uploadStatus').textContent = '✓ Đã chọn ảnh — Vòng mới sẵn sàng!';
+    showToast('✓ Đã nạp đề bài: ' + (title || 'Ảnh mới'));
+  } catch (err) {
+    document.getElementById('uploadStatus').textContent = 'Không nạp được ảnh: ' + err.message;
+  }
+}
+
+document.getElementById('saveTeams').onclick = () => {
+  const a = document.getElementById('teamAName').value.trim() || 'Đội A';
+  const b = document.getElementById('teamBName').value.trim() || 'Đội B';
+  sendAction('btc:setTeams', { teamAName: a, teamBName: b });
+  showToast(`✓ Đã lưu 2 đội: ${a} & ${b}`);
+};
+
+document.getElementById('refFile').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('uploadStatus').textContent = 'Đang tải lên Supabase Storage...';
+  try {
+    const dataUrl = await fileToDataUrl(file);
+    const res = await fetch('/api/gallery/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl, filename: file.name })
+    });
+    const d = await res.json();
+    sendAction('btc:uploadReference', dataUrl);
+    document.getElementById('currentRefThumb').src = dataUrl;
+    document.getElementById('currentRefTitle').textContent = file.name;
+    document.getElementById('uploadStatus').textContent = '✓ Đã lưu vào kho ảnh Supabase và nạp đề bài!';
+    showToast('✓ Tải ảnh thành công!');
+    loadGallery();
+  } catch (err) {
+    document.getElementById('uploadStatus').textContent = 'Lỗi upload: ' + err.message;
+  }
+};
+
+document.getElementById('startViewing').onclick = () => {
+  const secs = parseInt(document.getElementById('viewSeconds').value, 10) || 60;
+  sendAction('btc:startViewing', secs);
+  showToast('▶ Bắt đầu đếm ngược ' + secs + 's xem đề bài!');
+};
+
+document.getElementById('collapseNow').onclick = () => {
+  sendAction('btc:collapseNow');
+  showToast('⏬ Đã gập xuống — Các đội bắt đầu viết prompt!');
+};
+
+document.getElementById('forceGenerate').onclick = () => {
+  if (confirm('Bạn có chắc muốn ép tạo ảnh dù một số đội chưa gửi prompt?')) {
+    sendAction('btc:forceGenerate');
+    showToast('⚡ Đang kích hoạt Nano Banana tạo ảnh...');
+  }
+};
+
+document.getElementById('resetRound').onclick = () => {
+  if (confirm('Reset vòng đấu hiện tại?')) {
+    sendAction('btc:resetRound');
+    showToast('↺ Đã reset vòng đấu.');
+  }
+};
+
+document.getElementById('resetLeaderboard').onclick = () => {
+  if (confirm('CẢNH BÁO: Bạn có chắc chắn muốn xóa sạch bảng xếp hạng không?')) {
+    sendAction('btc:resetLeaderboard');
+    showToast('Đã xóa bảng xếp hạng.');
+  }
+};
+
+document.getElementById('saveJudgePrompt').onclick = () => {
+  sendAction('btc:setJudgePrompt', document.getElementById('judgePrompt').value);
+  showToast('✓ Đã lưu tiêu chí giám khảo AI.');
+};
+
+function resetJudgePromptDefault() {
+  const def = `Bạn là giám khảo cuộc thi "Prompt Challenge". Bạn sẽ nhận 1 ảnh gốc (reference) và ảnh do 1 đội tạo ra từ prompt của họ.\nChấm điểm mức độ GIỐNG NHAU giữa 2 ảnh trên thang 1-5 sao (có thể lẻ 0.5), dựa trên: chủ thể chính, bố cục, màu sắc/phong cách, chi tiết phụ.\nTrả lời CHỈ bằng JSON, không thêm chữ nào khác, đúng format:\n{"score": <số 1-5>, "reason": "<1 câu ngắn giải thích bằng tiếng Việt>"}`;
+  document.getElementById('judgePrompt').value = def;
+  sendAction('btc:setJudgePrompt', def);
+  showToast('✓ Đã khôi phục prompt giám khảo mặc định.');
+}
+
+function adjustTimer(delta) {
+  sendAction('btc:adjustTimer', { delta });
+}
+
+function statusText(s) {
+  switch (s.phase) {
+    case 'idle': return 'Chưa bắt đầu. Chọn hoặc upload ảnh reference để bắt đầu vòng mới.';
+    case 'viewing': return `Đang xem ảnh đề bài — Còn ${s.secondsLeft} giây.`;
+    case 'prompting': return `Đang chờ 2 đội viết prompt — ${s.teamAName}: ${s.submittedA ? '✓ Đã nộp' : 'Đang nhập...'} | ${s.teamBName}: ${s.submittedB ? '✓ Đã nộp' : 'Đang nhập...'}`;
+    case 'generating': return 'Nano Banana (Gemini 2.5 Flash Image) đang tạo ảnh từ prompt...';
+    case 'judging': return 'Gemini Flash Multimodal đang so khớp và chấm điểm...';
+    case 'results': return 'Đã có kết quả! Màn hình TV đã hiển thị ván đấu.';
+    case 'error': return 'Có lỗi xảy ra: ' + (s.errorMessage || '');
+    default: return '';
+  }
+}
+
+function render(s) {
+  currentState = s;
+  document.getElementById('phaseTag').textContent = s.phase.toUpperCase();
+  document.getElementById('statusLine').textContent = statusText(s);
+  document.getElementById('roundNumber').textContent = s.round || 1;
+
+  // Phase tag styling
+  const pt = document.getElementById('phaseTag');
+  pt.className = 'phase-tag';
+  if (s.phase === 'viewing') pt.style.color = 'var(--team-a)';
+  else if (s.phase === 'prompting') pt.style.color = 'var(--accent)';
+  else if (s.phase === 'generating' || s.phase === 'judging') pt.style.color = '#c084fc';
+  else if (s.phase === 'results') pt.style.color = 'var(--success)';
+  else pt.style.color = 'var(--text-muted)';
+
+  // Timer badges
+  const timerBadge = document.getElementById('adminTimerBadge');
+  const timerAdjustGroup = document.getElementById('timerAdjustGroup');
+  if (s.phase === 'viewing') {
+    timerBadge.style.display = 'inline-flex';
+    timerAdjustGroup.style.display = 'inline-flex';
+    document.getElementById('adminTimerSecs').textContent = s.secondsLeft;
+  } else {
+    timerBadge.style.display = 'none';
+    timerAdjustGroup.style.display = 'none';
+  }
+
+  // Active Ref image update
+  if (s.referenceImage) {
+    document.getElementById('currentRefThumb').src = s.referenceImage;
+    if (document.getElementById('currentRefTitle').textContent === 'Chưa chọn ảnh') {
+      document.getElementById('currentRefTitle').textContent = `Đề bài vòng ${s.round || 1}`;
+    }
+  }
+
+  // Live Prompt Monitor update
+  document.getElementById('monitorNameA').textContent = s.teamAName;
+  document.getElementById('monitorNameB').textContent = s.teamBName;
+  if (s.submittedA) {
+    document.getElementById('monitorStatusA').className = 'badge-submitted';
+    document.getElementById('monitorStatusA').textContent = '✓ ĐÃ NỘP PROMPT';
+    document.getElementById('monitorDetailA').textContent = s.promptA ? `"${s.promptA.slice(0, 60)}${s.promptA.length > 60 ? '...' : ''}"` : 'Đã gửi prompt';
+  } else {
+    document.getElementById('monitorStatusA').className = 'badge-waiting';
+    document.getElementById('monitorStatusA').textContent = s.phase === 'prompting' ? 'Đang viết...' : 'Chưa nộp';
+    document.getElementById('monitorDetailA').textContent = s.phase === 'prompting' ? 'Đội A đang thảo luận & soạn prompt' : 'Chưa đến pha viết prompt';
+  }
+
+  if (s.submittedB) {
+    document.getElementById('monitorStatusB').className = 'badge-submitted';
+    document.getElementById('monitorStatusB').textContent = '✓ ĐÃ NỘP PROMPT';
+    document.getElementById('monitorDetailB').textContent = s.promptB ? `"${s.promptB.slice(0, 60)}${s.promptB.length > 60 ? '...' : ''}"` : 'Đã gửi prompt';
+  } else {
+    document.getElementById('monitorStatusB').className = 'badge-waiting';
+    document.getElementById('monitorStatusB').textContent = s.phase === 'prompting' ? 'Đang viết...' : 'Chưa nộp';
+    document.getElementById('monitorDetailB').textContent = s.phase === 'prompting' ? 'Đội B đang thảo luận & soạn prompt' : 'Chưa đến pha viết prompt';
+  }
+
+  // Active elements
+  if (document.activeElement?.id !== 'judgePrompt') {
+    document.getElementById('judgePrompt').value = s.judgeSystemPrompt;
+  }
+  if (document.activeElement?.id !== 'teamAName') document.getElementById('teamAName').value = s.teamAName;
+  if (document.activeElement?.id !== 'teamBName') document.getElementById('teamBName').value = s.teamBName;
+
+  // Error Panel
+  document.getElementById('errorPanel').style.display = s.phase === 'error' ? 'block' : 'none';
+  if (s.phase === 'error') document.getElementById('errorBox').textContent = s.errorMessage || 'Lỗi không xác định.';
+
+  // Results Panel
+  const resultsPanel = document.getElementById('resultsPanel');
+  if (s.phase === 'results') {
+    resultsPanel.style.display = 'block';
+    document.getElementById('resultsGrid').innerHTML = `
+      <div class="team-card a">
+        <div class="name">${s.teamAName}</div>
+        <img class="result-image" src="${s.imageA}" />
+        <div class="score-big">${s.scoreA} ★</div>
+        <div class="reason">${s.reasonA}</div>
+        <div style="font-size: 11px; color: var(--text-dim); margin-top: 6px; font-family: var(--font-mono);">Prompt: "${s.promptA}"</div>
+      </div>
+      <div class="team-card b">
+        <div class="name">${s.teamBName}</div>
+        <img class="result-image" src="${s.imageB}" />
+        <div class="score-big">${s.scoreB} ★</div>
+        <div class="reason">${s.reasonB}</div>
+        <div style="font-size: 11px; color: var(--text-dim); margin-top: 6px; font-family: var(--font-mono);">Prompt: "${s.promptB}"</div>
+      </div>`;
+  } else {
+    resultsPanel.style.display = 'none';
+  }
+}
+
+function renderLeaderboard(lb) {
+  const sorted = Object.entries(lb).sort((a, b) => b[1].totalScore - a[1].totalScore);
+  const rows = sorted.map(([name, d], idx) => {
+    let medal = `#${idx + 1}`;
+    if (idx === 0) medal = '🥇 #1';
+    else if (idx === 1) medal = '🥈 #2';
+    else if (idx === 2) medal = '🥉 #3';
+    return `
+      <tr>
+        <td style="font-family: var(--font-mono); font-weight: 700; color: ${idx === 0 ? 'var(--accent)' : 'var(--text-dim)'};">${medal}</td>
+        <td style="font-weight: 600;">${name}</td>
+        <td style="font-family: var(--font-mono); font-weight: 700; color: var(--accent);">${d.totalScore.toFixed(1)} ★</td>
+        <td style="font-family: var(--font-mono); color: var(--text-muted);">${d.rounds}</td>
+        <td style="font-family: var(--font-mono); color: var(--text-muted);">${(d.totalScore / d.rounds).toFixed(2)}</td>
+      </tr>
+    `;
+  }).join('');
+  document.querySelector('#leaderboardTable tbody').innerHTML = rows || '<tr><td colspan="5" style="color: var(--text-dim); text-align: center; padding: 20px;">Chưa có đội nào trong bảng xếp hạng hôm nay.</td></tr>';
+}
+
+socket.on('state', render);
+socket.on('leaderboard', renderLeaderboard);
+
+// Polling fallback
+setInterval(() => {
+  if (!socket.connected) {
+    fetch('/api/state').then(r => r.json()).then(render).catch(() => {});
+  }
+}, 1500);
+</script>
+</body>
+</html>

@@ -181,7 +181,7 @@ label {
   margin-bottom: 6px;
 }
 
-input[type="text"], textarea {
+input[type="text"], input[type="password"], input[type="number"], textarea {
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--panel-line);
@@ -194,7 +194,7 @@ input[type="text"], textarea {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-input[type="text"]:focus, textarea:focus {
+input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, textarea:focus {
   outline: none;
   border-color: var(--team-a);
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
