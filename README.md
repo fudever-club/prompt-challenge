@@ -5,9 +5,9 @@
   # 🎯 PROMPT CHALLENGE
   ### Nền tảng Thi Đấu Prompt AI Đối Kháng Real-time
 
-  **Một sản phẩm công nghệ sáng tạo được phát triển bởi [CLB Lập trình FU-DEVER](https://fudever.club) — Trường Đại học FPT Đà Nẵng.**
+  **Một sản phẩm công nghệ sáng tạo được phát triển bởi [CLB Lập trình FU-DEVER](https://fudever.com) — Trường Đại học FPT Đà Nẵng.**
 
-  [![Developed by FU-DEVER](https://img.shields.io/badge/Developed%20By-FU--DEVER-10b981.svg?style=for-the-badge&logo=codeforces&logoColor=white)](https://facebook.com/fudever.club)
+  [![Developed by FU-DEVER](https://img.shields.io/badge/Developed%20By-FU--DEVER-10b981.svg?style=for-the-badge&logo=codeforces&logoColor=white)](https://facebook.com/FPTUDever)
   [![FPT University](https://img.shields.io/badge/Campus-FPT%20University%20Da%20Nang-f97316.svg?style=for-the-badge&logo=fpt&logoColor=white)](https://dnuni.fpt.edu.vn)
   [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933.svg?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
   [![Socket.io](https://img.shields.io/badge/Socket.io-v4.7-010101.svg?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io)
@@ -257,15 +257,16 @@ node test_e2e_flow.js
 ## 👥 Về FU-DEVER
 
 <div align="center">
-  <img src="public/assets/logo-dever-white.png" alt="FU-DEVER Club" width="100" style="background:#0f172a; padding:10px; border-radius:12px;"/>
+  <img src="public/assets/logo-dever-white.png" alt="FU-DEVER Club" width="110" style="background:#0f172a; padding:10px; border-radius:12px;"/>
   <br/><br/>
-  <p><strong>CLB Lập Trình & Kỹ Thuật Phần Mềm FU-DEVER — Trường Đại học FPT Đà Nẵng</strong></p>
-  <p><i>"Code for Passion — Build for Future"</i></p>
-  <p>Được thành lập từ năm 2016, FU-DEVER là một trong những câu lạc bộ học thuật công nghệ hàng đầu tại Đại học FPT Đà Nẵng, nơi quy tụ các sinh viên đam mê Kỹ thuật Phần mềm, Trí tuệ Nhân tạo, Phát triển Web, Mobile và Game.</p>
+  <p><strong>CLB LẬP TRÌNH FU-DEVER — TRƯỜNG ĐẠI HỌC FPT ĐÀ NẴNG</strong></p>
+  <p><i>"Work hard, Play hard"</i></p>
+  <p>Được thành lập từ năm <strong>2018</strong> (EST. 2018), FU-DEVER là câu lạc bộ học thuật kỹ thuật phần mềm hàng đầu tại Đại học FPT Đà Nẵng, nơi quy tụ các sinh viên đam mê Web Development, Artificial Intelligence (AI), Game Development và Mobile Development.</p>
   
   <p>
-    🌐 <strong>Website:</strong> <a href="https://fudever.club">fudever.club</a> &nbsp;|&nbsp;
-    📘 <strong>Fanpage:</strong> <a href="https://facebook.com/fudever.club">facebook.com/fudever.club</a> &nbsp;|&nbsp;
+    🌐 <strong>Website:</strong> <a href="https://fudever.com">fudever.com</a> &nbsp;|&nbsp;
+    📘 <strong>Fanpage:</strong> <a href="https://facebook.com/FPTUDever">facebook.com/FPTUDever</a> &nbsp;|&nbsp;
+    📧 <strong>Email:</strong> <a href="mailto:club.dever@gmail.com">club.dever@gmail.com</a> &nbsp;|&nbsp;
     🐙 <strong>GitHub:</strong> <a href="https://github.com/fudever-club">github.com/fudever-club</a>
   </p>
 </div>
