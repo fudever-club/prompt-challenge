@@ -257,7 +257,7 @@ node test_e2e_flow.js
 ## 👥 Về FU-DEVER
 
 <div align="center">
-  <img src="public/assets/logo-dever-white.png" alt="FU-DEVER Club" width="110" style="background:#0f172a; padding:10px; border-radius:12px;"/>
+  <img src="public/assets/logo-dever-color.png" alt="FU-DEVER Club" width="120" />
   <br/><br/>
   <p><strong>CLB LẬP TRÌNH FU-DEVER — TRƯỜNG ĐẠI HỌC FPT ĐÀ NẴNG</strong></p>
   <p><i>"Work hard, Play hard"</i></p>
