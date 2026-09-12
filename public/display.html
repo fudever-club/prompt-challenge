@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prompt Challenge — Màn Hình Khán Giả</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .idle-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      gap: 24px;
+    }
+    .idle-mascot {
+      width: 140px;
+      height: 140px;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
+    }
+    .rules-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 860px;
+      width: 100%;
+      margin-top: 10px;
+      text-align: left;
+    }
+    .rule-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-line);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .rule-num {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .rule-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .rule-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prompting-status {
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 12px;
+      font-family: var(--font-mono);
+    }
+  </style>
+</head>
+<body>
+<div class="wrap display-wrap">
+  <!-- Brand Masthead -->
+  <div class="masthead">
+    <div class="brand-group">
+      <div class="brand-logos">
+        <img class="logo-dever" src="/assets/logo-dever-white.png" alt="FU-DEVER Logo" />
+        <img class="logo-fptu" src="/assets/logo-fptu.png" alt="FPT University Logo" />
+      </div>
+      <div class="brand-divider"></div>
+      <div class="brand-title-area">
+        <div class="brand-title">PROMPT <span>CHALLENGE</span></div>
+        <div class="brand-subtitle">Gian Hàng Club Day • FU-DEVER</div>
+      </div>
+    </div>
+    <div class="role-badge">Màn Hình Trực Tiếp</div>
+  </div>
+
+  <!-- 1. Idle Block (Khi chưa bắt đầu vòng) -->
+  <div id="idleBlock">
+    <div class="idle-hero">
+      <img class="idle-mascot" src="/assets/buggy-welcome.png" alt="Buggy Mascot" />
+      <div>
+        <h1 style="font-size: 32px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.02em;">VÒNG THI TIẾP THEO SẮP BẮT ĐẦU</h1>
+        <p style="color: var(--text-muted); font-size: 16px;">2 đội đối đầu — 1 ảnh đề bài — 1 prompt duy nhất</p>
+      </div>
+
+      <div class="rules-row">
+        <div class="rule-card">
+          <div class="rule-num">Bước 01</div>
+          <div class="rule-title">Quan sát & Ghi nhớ</div>
+          <div class="rule-desc">Xem ảnh đề bài trong tối đa 60 giây. Ghi nhớ chủ thể, màu sắc và bối cảnh.</div>
+        </div>
+        <div class="rule-card">
+          <div class="rule-num">Bước 02</div>
+          <div class="rule-title">Soạn Prompt</div>
+          <div class="rule-desc">Mỗi đội gõ prompt mô tả lại trên tablet và bấm gửi (chỉ gửi 1 lần).</div>
+        </div>
+        <div class="rule-card">
+          <div class="rule-num">Bước 03</div>
+          <div class="rule-title">AI Chấm Điểm</div>
+          <div class="rule-desc">AI vẽ ảnh tức thì và chấm điểm mức độ giống nhau từ 1 đến 5 sao.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Viewing Block (Đang xem ảnh reference) -->
+  <div id="viewingBlock" style="display:none;">
+    <div class="phase-tag">Giai đoạn 1: Quan sát ảnh đề bài</div>
+    <div class="timer big-timer accent" id="timer">60</div>
+    <img class="ref-image ref-image-large" id="refImage" src="" alt="Ảnh Reference" />
+  </div>
+
+  <!-- 3. Prompting Block (2 đội đang viết prompt) -->
+  <div id="promptingBlock" style="display:none; padding-top: 20px;">
+    <div class="phase-tag">Giai đoạn 2: 2 đội đang viết prompt</div>
+    <h2 style="font-size: 26px; font-weight: 800; margin-bottom: 30px;">CÁC ĐỘI ĐANG SOẠN PROMPT TRÊN TABLET</h2>
+    <div class="grid-2">
+      <div class="team-card a" style="padding: 30px;">
+        <div class="name" id="nameAWait" style="font-size: 24px;">Đội A</div>
+        <div class="prompting-status" id="statusA" style="color: var(--team-a);">Đang nhập prompt...</div>
+      </div>
+      <div class="team-card b" style="padding: 30px;">
+        <div class="name" id="nameBWait" style="font-size: 24px;">Đội B</div>
+        <div class="prompting-status" id="statusB" style="color: var(--team-b);">Đang nhập prompt...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Processing Block (Đang sinh ảnh hoặc chấm điểm) -->
+  <div id="processingBlock" style="display:none; padding: 40px 20px;">
+    <img src="/assets/buggy-thinking.png" alt="Buggy thinking" style="width: 120px; height: 120px; margin-bottom: 20px;" />
+    <div class="phase-tag" id="processTag">Đang xử lý</div>
+    <h2 style="font-size: 28px; font-weight: 800; margin: 12px 0;" id="processTitle">AI ĐANG VẼ ẢNH TỪ PROMPT CỦA 2 ĐỘI...</h2>
+    <p style="color: var(--text-muted); font-size: 15px;">Mô hình Nano Banana đang tổng hợp hình ảnh song song.</p>
+  </div>
+
+  <!-- 5. Results Block (Kết quả đối đầu) -->
+  <div id="resultsBlock" style="display:none;">
+    <div class="phase-tag">Giai đoạn 3: Kết quả đối đầu</div>
+    <h2 style="font-size: 28px; font-weight: 800; margin-bottom: 24px;">SO SÁNH KẾT QUẢ 2 ĐỘI</h2>
+    <div class="grid-2">
+      <div class="team-card a">
+        <div class="name" id="nameA" style="font-size: 20px;">Đội A</div>
+        <img class="result-image" id="imageA" src="" alt="Ảnh Đội A" />
+        <div class="score-big" id="scoreA">0 ★</div>
+        <div class="reason" id="reasonA" style="font-size: 14px; text-align: left; margin-top: 10px;"></div>
+      </div>
+      <div class="team-card b">
+        <div class="name" id="nameB" style="font-size: 20px;">Đội B</div>
+        <img class="result-image" id="imageB" src="" alt="Ảnh Đội B" />
+        <div class="score-big" id="scoreB">0 ★</div>
+        <div class="reason" id="reasonB" style="font-size: 14px; text-align: left; margin-top: 10px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+function show(id) {
+  ['idleBlock','viewingBlock','promptingBlock','processingBlock','resultsBlock'].forEach(b => {
+    const el = document.getElementById(b);
+    if (el) el.style.display = (b === id) ? 'block' : 'none';
+  });
+}
+
+function render(s) {
+  if (s.phase === 'idle') {
+    show('idleBlock');
+    return;
+  }
+
+  if (s.phase === 'viewing') {
+    show('viewingBlock');
+    document.getElementById('timer').textContent = s.secondsLeft;
+    document.getElementById('refImage').src = s.referenceImage || '';
+    return;
+  }
+
+  if (s.phase === 'prompting') {
+    show('promptingBlock');
+    document.getElementById('nameAWait').textContent = s.teamAName;
+    document.getElementById('nameBWait').textContent = s.teamBName;
+    document.getElementById('statusA').textContent = s.submittedA ? '✓ Đã hoàn thành prompt' : 'Đang nhập prompt...';
+    document.getElementById('statusB').textContent = s.submittedB ? '✓ Đã hoàn thành prompt' : 'Đang nhập prompt...';
+    return;
+  }
+
+  if (s.phase === 'generating' || s.phase === 'judging') {
+    show('processingBlock');
+    const isGen = s.phase === 'generating';
+    document.getElementById('processTag').textContent = isGen ? 'Đang tạo ảnh' : 'Đang chấm điểm';
+    document.getElementById('processTitle').textContent = isGen ? 'AI ĐANG VẼ ẢNH TỪ PROMPT CỦA 2 ĐỘI...' : 'GIÁM KHẢO AI ĐANG SO KHỚP VÀ CHẤM ĐIỂM...';
+    return;
+  }
+
+  if (s.phase === 'results') {
+    show('resultsBlock');
+    document.getElementById('nameA').textContent = s.teamAName;
+    document.getElementById('nameB').textContent = s.teamBName;
+    document.getElementById('imageA').src = s.imageA || '';
+    document.getElementById('imageB').src = s.imageB || '';
+    document.getElementById('scoreA').textContent = `${s.scoreA} ★`;
+    document.getElementById('scoreB').textContent = `${s.scoreB} ★`;
+    document.getElementById('reasonA').textContent = s.reasonA || '';
+    document.getElementById('reasonB').textContent = s.reasonB || '';
+  }
+}
+
+socket.on('state', render);
+</script>
+</body>
+</html>

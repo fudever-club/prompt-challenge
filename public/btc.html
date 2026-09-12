@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prompt Challenge — Ban Tổ Chức</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .btc-top-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 860px) {
+      .btc-top-grid { grid-template-columns: 1fr; }
+    }
+    .control-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .timer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--bg);
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--panel-line);
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Brand Masthead -->
+  <div class="masthead">
+    <div class="brand-group">
+      <div class="brand-logos">
+        <img class="logo-dever" src="/assets/logo-dever-white.png" alt="FU-DEVER Logo" />
+        <img class="logo-fptu" src="/assets/logo-fptu.png" alt="FPT University Logo" />
+      </div>
+      <div class="brand-divider"></div>
+      <div class="brand-title-area">
+        <div class="brand-title">PROMPT <span>CHALLENGE</span></div>
+        <div class="brand-subtitle">Gian Hàng Club Day • FU-DEVER</div>
+      </div>
+    </div>
+    <div class="role-badge btc">Bàn Điều Khiển BTC</div>
+  </div>
+
+  <div class="btc-top-grid">
+    <!-- Panel 1: Đội thi -->
+    <div class="panel">
+      <h2>1. Thiết lập 2 đội thi</h2>
+      <div class="grid-2">
+        <div>
+          <label>Tên Đội A</label>
+          <input type="text" id="teamAName" placeholder="Nhập tên Đội A" />
+        </div>
+        <div>
+          <label>Tên Đội B</label>
+          <input type="text" id="teamBName" placeholder="Nhập tên Đội B" />
+        </div>
+      </div>
+      <button class="primary" id="saveTeams">Lưu Tên Đội</button>
+    </div>
+
+    <!-- Panel 2: Chọn / Upload ảnh Reference -->
+    <div class="panel">
+      <h2>2. Ảnh Đề Bài (Reference)</h2>
+      <label>Chọn nhanh từ mẫu có sẵn:</label>
+      <div class="preset-gallery">
+        <div class="preset-card" onclick="selectPreset('/assets/samples/cat-astronaut.jpg')">
+          <img src="/assets/samples/cat-astronaut.jpg" alt="Mèo Phi Hành Gia" />
+          <div class="title">Mèo Astronaut</div>
+        </div>
+        <div class="preset-card" onclick="selectPreset('/assets/samples/robot-garden.jpg')">
+          <img src="/assets/samples/robot-garden.jpg" alt="Robot Làm Vườn" />
+          <div class="title">Robot Vườn Hoa</div>
+        </div>
+      </div>
+
+      <label>Hoặc tải ảnh mới từ máy tính:</label>
+      <input type="file" id="refFile" accept="image/*" />
+      <div class="status-line" id="uploadStatus" style="margin-bottom: 0; font-size: 12px;"></div>
+    </div>
+  </div>
+
+  <!-- Panel 3: Điều khiển vòng chơi -->
+  <div class="panel">
+    <h2>3. Điều khiển trận đấu</h2>
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <div class="phase-tag" id="phaseTag">idle</div>
+        <div class="status-line" id="statusLine">Đang chờ thiết lập vòng đấu...</div>
+      </div>
+      <div class="timer-badge" id="btcTimerBadge" style="display: none;">
+        <span>Thời gian:</span>
+        <span id="btcTimerSecs">60</span>s
+      </div>
+    </div>
+
+    <div style="margin: 14px 0 6px;">
+      <label>Thời gian xem ảnh (giây):</label>
+      <input type="text" id="viewSeconds" value="60" style="max-width: 160px; display: inline-block; margin-right: 10px;" />
+    </div>
+
+    <div class="control-actions">
+      <button class="accent" id="startViewing" style="font-size: 15px; padding: 12px 22px;">
+        ▶ Bắt Đầu Vòng (Xem Ảnh)
+      </button>
+      <button class="primary" id="collapseNow" style="background: #334155; border-color: #475569; font-size: 15px; padding: 12px 20px;">
+        ⏬ Gập Xuống (Chuyển Sang Viết Prompt)
+      </button>
+      <button class="ghost" id="forceGenerate">
+        ⚡ Ép Tạo Ảnh Dù Thiếu Prompt
+      </button>
+      <button class="ghost" id="resetRound">
+        ↺ Reset Vòng Này
+      </button>
+    </div>
+  </div>
+
+  <!-- Panel Kết quả vòng vừa rồi -->
+  <div class="panel" id="resultsPanel" style="display:none;">
+    <h2>Kết Quả Trận Đấu Vừa Rồi</h2>
+    <div class="grid-2" id="resultsGrid"></div>
+  </div>
+
+  <!-- Panel Báo lỗi nếu có -->
+  <div class="panel" id="errorPanel" style="display:none; border-color: var(--danger);">
+    <div style="color: #fca5a5; font-size: 14px;" id="errorBox"></div>
+  </div>
+
+  <!-- Panel 4: Leaderboard -->
+  <div class="panel">
+    <h2>4. Bảng Xếp Hạng Chung (Leaderboard)</h2>
+    <table class="leaderboard" id="leaderboardTable">
+      <thead>
+        <tr>
+          <th>Hạng</th>
+          <th>Tên Đội</th>
+          <th>Tổng Điểm</th>
+          <th>Số Ván</th>
+          <th>Điểm TB</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button class="danger" id="resetLeaderboard" style="font-size: 12px; padding: 6px 12px;">Xóa Bảng Xếp Hạng</button>
+  </div>
+
+  <!-- Panel 5: Cấu hình Prompt Chấm Điểm -->
+  <div class="panel">
+    <h2>5. Tiêu chí AI Chấm Điểm</h2>
+    <textarea id="judgePrompt" rows="4"></textarea>
+    <button class="ghost" id="saveJudgePrompt">Lưu Tiêu Chí</button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let currentState = null;
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+async function selectPreset(url) {
+  document.getElementById('uploadStatus').textContent = 'Đang nạp ảnh mẫu...';
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const dataUrl = await fileToDataUrl(blob);
+    socket.emit('btc:uploadReference', dataUrl);
+    document.getElementById('uploadStatus').textContent = '✓ Đã chọn ảnh mẫu — Vòng mới sẵn sàng!';
+  } catch (err) {
+    document.getElementById('uploadStatus').textContent = 'Không tải được ảnh mẫu.';
+  }
+}
+
+document.getElementById('saveTeams').onclick = () => {
+  socket.emit('btc:setTeams', {
+    teamAName: document.getElementById('teamAName').value.trim() || 'Đội A',
+    teamBName: document.getElementById('teamBName').value.trim() || 'Đội B',
+  });
+};
+
+document.getElementById('refFile').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('uploadStatus').textContent = 'Đang tải ảnh lên...';
+  const dataUrl = await fileToDataUrl(file);
+  socket.emit('btc:uploadReference', dataUrl);
+  document.getElementById('uploadStatus').textContent = '✓ Đã upload ảnh — Vòng mới sẵn sàng!';
+};
+
+document.getElementById('startViewing').onclick = () => {
+  const secs = parseInt(document.getElementById('viewSeconds').value, 10) || 60;
+  socket.emit('btc:startViewing', secs);
+};
+
+document.getElementById('collapseNow').onclick = () => socket.emit('btc:collapseNow');
+document.getElementById('forceGenerate').onclick = () => socket.emit('btc:forceGenerate');
+document.getElementById('resetRound').onclick = () => socket.emit('btc:resetRound');
+document.getElementById('resetLeaderboard').onclick = () => {
+  if (confirm('Bạn có chắc chắn muốn xóa toàn bộ bảng xếp hạng không?')) {
+    socket.emit('btc:resetLeaderboard');
+  }
+};
+
+document.getElementById('saveJudgePrompt').onclick = () => {
+  socket.emit('btc:setJudgePrompt', document.getElementById('judgePrompt').value);
+  alert('Đã lưu system prompt cho AI chấm điểm.');
+};
+
+function statusText(s) {
+  switch (s.phase) {
+    case 'idle': return 'Chưa bắt đầu. Chọn hoặc upload ảnh reference để bắt đầu vòng mới.';
+    case 'viewing': return `Đang xem ảnh đề bài — Còn ${s.secondsLeft} giây.`;
+    case 'prompting': return `Đang chờ prompt — ${s.teamAName}: ${s.submittedA ? '✓ Đã gửi' : 'Đang nhập'} | ${s.teamBName}: ${s.submittedB ? '✓ Đã gửi' : 'Đang nhập'}`;
+    case 'generating': return 'Nano Banana đang vẽ ảnh từ prompt của 2 đội...';
+    case 'judging': return 'Gemini Flash đang chấm điểm so khớp...';
+    case 'results': return 'Đã có kết quả trận đấu.';
+    case 'error': return 'Có lỗi xảy ra: ' + (s.errorMessage || '');
+    default: return '';
+  }
+}
+
+function render(s) {
+  currentState = s;
+  document.getElementById('phaseTag').textContent = s.phase;
+  document.getElementById('statusLine').textContent = statusText(s);
+
+  const timerBadge = document.getElementById('btcTimerBadge');
+  if (s.phase === 'viewing') {
+    timerBadge.style.display = 'inline-flex';
+    document.getElementById('btcTimerSecs').textContent = s.secondsLeft;
+  } else {
+    timerBadge.style.display = 'none';
+  }
+
+  if (document.activeElement?.id !== 'judgePrompt') {
+    document.getElementById('judgePrompt').value = s.judgeSystemPrompt;
+  }
+  if (document.activeElement?.id !== 'teamAName') document.getElementById('teamAName').value = s.teamAName;
+  if (document.activeElement?.id !== 'teamBName') document.getElementById('teamBName').value = s.teamBName;
+
+  document.getElementById('errorPanel').style.display = s.phase === 'error' ? 'block' : 'none';
+  if (s.phase === 'error') document.getElementById('errorBox').textContent = s.errorMessage || 'Lỗi không xác định.';
+
+  const resultsPanel = document.getElementById('resultsPanel');
+  if (s.phase === 'results') {
+    resultsPanel.style.display = 'block';
+    document.getElementById('resultsGrid').innerHTML = `
+      <div class="team-card a">
+        <div class="name">${s.teamAName}</div>
+        <img class="result-image" src="${s.imageA}" />
+        <div class="score-big">${s.scoreA} ★</div>
+        <div class="reason">${s.reasonA}</div>
+      </div>
+      <div class="team-card b">
+        <div class="name">${s.teamBName}</div>
+        <img class="result-image" src="${s.imageB}" />
+        <div class="score-big">${s.scoreB} ★</div>
+        <div class="reason">${s.reasonB}</div>
+      </div>`;
+  } else {
+    resultsPanel.style.display = 'none';
+  }
+}
+
+function renderLeaderboard(lb) {
+  const sorted = Object.entries(lb).sort((a, b) => b[1].totalScore - a[1].totalScore);
+  const rows = sorted.map(([name, d], idx) => `
+    <tr>
+      <td style="font-family: var(--font-mono); font-weight: 700; color: ${idx === 0 ? 'var(--accent)' : 'var(--text-dim)'};">#${idx + 1}</td>
+      <td style="font-weight: 600;">${name}</td>
+      <td style="font-family: var(--font-mono); font-weight: 700; color: var(--accent);">${d.totalScore.toFixed(1)} ★</td>
+      <td style="font-family: var(--font-mono); color: var(--text-muted);">${d.rounds}</td>
+      <td style="font-family: var(--font-mono); color: var(--text-muted);">${(d.totalScore / d.rounds).toFixed(2)}</td>
+    </tr>
+  `).join('');
+  document.querySelector('#leaderboardTable tbody').innerHTML = rows || '<tr><td colspan="5" style="color: var(--text-dim); text-align: center; padding: 20px;">Chưa có đội nào trong bảng xếp hạng hôm nay.</td></tr>';
+}
+
+socket.on('state', render);
+socket.on('leaderboard', renderLeaderboard);
+</script>
+</body>
+</html>

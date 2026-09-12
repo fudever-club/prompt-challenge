@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prompt Challenge — Đội Chơi</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .team-header-badge {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .char-count {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-dim);
+      text-align: right;
+      margin-top: -6px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap" style="max-width: 760px;">
+  <!-- Brand Masthead -->
+  <div class="masthead">
+    <div class="brand-group">
+      <div class="brand-logos">
+        <img class="logo-dever" src="/assets/logo-dever-white.png" alt="FU-DEVER Logo" />
+      </div>
+      <div class="brand-divider"></div>
+      <div class="brand-title-area">
+        <div class="brand-title">PROMPT <span>CHALLENGE</span></div>
+        <div class="brand-subtitle" id="teamSubtitle">Giao diện thi đấu</div>
+      </div>
+    </div>
+    <div class="team-header-badge" id="teamBadge">Đội —</div>
+  </div>
+
+  <!-- 1. Idle Block (Chờ BTC bắt đầu) -->
+  <div id="idleBlock" class="panel">
+    <div style="text-align: center; padding: 24px 10px;">
+      <img src="/assets/buggy-welcome.png" alt="Buggy" style="width: 100px; height: 100px; margin-bottom: 16px;" />
+      <h2 style="font-size: 20px; font-weight: 800; color: var(--text); justify-content: center; margin-bottom: 6px;" id="idleTeamGreeting">
+        SẴN SÀNG THI ĐẤU
+      </h2>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+        Vui lòng chờ Ban Tổ Chức kích hoạt vòng đấu mới trên màn hình chính.
+      </p>
+
+      <div class="mascot-hint" style="background: var(--bg); text-align: left;">
+        <div>
+          <div style="font-weight: 700; font-size: 13px; color: var(--text); margin-bottom: 4px;">💡 Mẹo prompt cho đội bạn:</div>
+          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+            Khi được xem ảnh, hãy phân công người nhớ chủ thể chính, người nhớ màu sắc và bối cảnh. Càng chi tiết về phong cách (3D, anime, tranh sơn dầu...) AI vẽ càng sát!
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Viewing Block (Đang xem ảnh) -->
+  <div id="viewingBlock" class="panel" style="display:none; text-align: center;">
+    <div class="phase-tag">Đang quan sát ảnh đề bài</div>
+    <div class="timer accent" id="timer">60</div>
+    <img class="ref-image" id="refImage" src="" alt="Ảnh đề bài" style="max-width: 480px; margin: 0 auto;" />
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 12px;">Ghi nhớ kỹ chi tiết trước khi màn hình gập xuống!</p>
+  </div>
+
+  <!-- 3. Prompting Block (Nhập prompt) -->
+  <div id="promptBlock" class="panel" style="display:none;">
+    <div class="phase-tag">Soạn thảo prompt</div>
+    <h2 style="font-size: 18px; margin-bottom: 8px;">Nhập mô tả ảnh cho AI vẽ lại</h2>
+    <label>Mô tả chi tiết bằng tiếng Việt hoặc tiếng Anh (Chỉ gửi 1 lần duy nhất):</label>
+    <textarea id="promptInput" rows="5" placeholder="Ví dụ: Một chú mèo phi hành gia lông vàng ngồi trong quán cafe ấm cúng, tranh 3D kỹ thuật số chi tiết..."></textarea>
+    <div class="char-count" id="charCount">0 ký tự</div>
+
+    <button class="primary" id="submitPrompt" style="width: 100%; font-size: 16px; padding: 14px;">
+      🚀 Gửi Prompt Cho AI Vẽ Ảnh
+    </button>
+  </div>
+
+  <!-- 4. Wait Block (Đang chờ đối thủ / chờ AI sinh ảnh) -->
+  <div id="waitBlock" class="panel" style="display:none; text-align: center; padding: 36px 20px;">
+    <img src="/assets/buggy-thinking.png" alt="Buggy Thinking" style="width: 90px; height: 90px; margin-bottom: 14px;" />
+    <div class="phase-tag" id="waitTag">Đang xử lý</div>
+    <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;" id="waitTitle">Đã Gửi Prompt Thành Công!</h3>
+    <div class="status-line" id="waitText">Đang chờ AI tạo ảnh và giám khảo chấm điểm...</div>
+  </div>
+
+  <!-- 5. Result Block (Kết quả của đội mình) -->
+  <div id="resultBlock" class="panel" style="display:none;">
+    <div class="phase-tag">Kết quả của đội bạn</div>
+    <div style="text-align: center; margin-bottom: 16px;">
+      <img class="result-image" id="resultImage" src="" alt="Ảnh tạo ra" style="max-width: 440px; margin: 0 auto;" />
+      <div class="score-big" id="resultScore">0 ★</div>
+      <div class="reason" id="resultReason" style="font-size: 14px; max-width: 520px; margin: 8px auto 0;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const params = new URLSearchParams(window.location.search);
+const team = (params.get('team') || 'A').toUpperCase();
+
+const badge = document.getElementById('teamBadge');
+badge.textContent = `ĐỘI ${team}`;
+badge.className = `team-header-badge ${team === 'A' ? 'role-badge team-a' : 'role-badge team-b'}`;
+document.getElementById('teamSubtitle').textContent = `Màn hình máy tính bảng — Đội ${team}`;
+
+let hasSubmitted = false;
+
+const promptInput = document.getElementById('promptInput');
+const charCount = document.getElementById('charCount');
+promptInput.addEventListener('input', () => {
+  charCount.textContent = `${promptInput.value.length} ký tự`;
+});
+
+function show(id) {
+  ['viewingBlock','promptBlock','waitBlock','resultBlock','idleBlock'].forEach(b => {
+    const el = document.getElementById(b);
+    if (el) el.style.display = (b === id) ? 'block' : 'none';
+  });
+}
+
+document.getElementById('submitPrompt').onclick = () => {
+  const val = promptInput.value.trim();
+  if (!val || hasSubmitted) return;
+  hasSubmitted = true;
+  socket.emit('team:submitPrompt', { team, prompt: val });
+  document.getElementById('submitPrompt').disabled = true;
+  show('waitBlock');
+  document.getElementById('waitTitle').textContent = 'Đã gửi prompt thành công!';
+  document.getElementById('waitText').textContent = 'Đang chờ đội đối thủ hoàn thành...';
+};
+
+function render(s) {
+  const teamName = team === 'A' ? s.teamAName : s.teamBName;
+  badge.textContent = `${teamName.toUpperCase()} (${team})`;
+
+  if (s.phase === 'idle') {
+    show('idleBlock');
+    hasSubmitted = false;
+    promptInput.value = '';
+    charCount.textContent = '0 ký tự';
+    document.getElementById('submitPrompt').disabled = false;
+    document.getElementById('idleTeamGreeting').textContent = `${teamName.toUpperCase()} — SẴN SÀNG THI ĐẤU`;
+    return;
+  }
+
+  if (s.phase === 'viewing') {
+    show('viewingBlock');
+    document.getElementById('timer').textContent = s.secondsLeft;
+    document.getElementById('refImage').src = s.referenceImage || '';
+    return;
+  }
+
+  if (s.phase === 'prompting') {
+    const submitted = team === 'A' ? s.submittedA : s.submittedB;
+    if (submitted) {
+      show('waitBlock');
+      document.getElementById('waitTitle').textContent = 'Đã gửi prompt!';
+      document.getElementById('waitText').textContent = 'Đang chờ đội đối thủ hoàn thành...';
+    } else {
+      show('promptBlock');
+    }
+    return;
+  }
+
+  if (s.phase === 'generating') {
+    show('waitBlock');
+    document.getElementById('waitTag').textContent = 'Đang sinh ảnh';
+    document.getElementById('waitTitle').textContent = 'AI Đang Vẽ Ảnh...';
+    document.getElementById('waitText').textContent = 'Nano Banana đang vẽ ảnh từ prompt của đội bạn.';
+    return;
+  }
+
+  if (s.phase === 'judging') {
+    show('waitBlock');
+    document.getElementById('waitTag').textContent = 'Đang chấm điểm';
+    document.getElementById('waitTitle').textContent = 'Giám Khảo Đang So Sánh Ảnh...';
+    document.getElementById('waitText').textContent = 'Gemini Flash đang đánh giá mức độ tương đồng.';
+    return;
+  }
+
+  if (s.phase === 'results') {
+    show('resultBlock');
+    const img = team === 'A' ? s.imageA : s.imageB;
+    const score = team === 'A' ? s.scoreA : s.scoreB;
+    const reason = team === 'A' ? s.reasonA : s.reasonB;
+    document.getElementById('resultImage').src = img || '';
+    document.getElementById('resultScore').textContent = `${score} ★`;
+    document.getElementById('resultReason').textContent = reason || '';
+    return;
+  }
+
+  if (s.phase === 'error') {
+    show('waitBlock');
+    document.getElementById('waitTag').textContent = 'Thông báo';
+    document.getElementById('waitTitle').textContent = 'Có lỗi xảy ra';
+    document.getElementById('waitText').textContent = s.errorMessage || 'Vui lòng báo lại với Ban Tổ Chức.';
+  }
+}
+
+socket.on('state', render);
+</script>
+</body>
+</html>

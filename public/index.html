@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prompt Challenge — Trung Tâm Điều Khiển</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 24px 0 28px;
+    }
+    .hub-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-line);
+      border-radius: var(--radius);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      color: inherit;
+    }
+    .hub-card:hover {
+      border-color: var(--panel-line-hover);
+      background: var(--panel-elevated);
+      transform: translateY(-2px);
+    }
+    .hub-card.btc:hover { border-color: var(--accent); }
+    .hub-card.team-a:hover { border-color: var(--team-a); }
+    .hub-card.team-b:hover { border-color: var(--team-b); }
+    .hub-card.display:hover { border-color: #94a3b8; }
+
+    .hub-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 12px 0 6px;
+      color: var(--text);
+    }
+    .hub-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .hub-action {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hub-card:hover .hub-action { color: var(--text); }
+
+    .qr-box {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      background: var(--panel);
+      border: 1px solid var(--panel-line);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+    @media (max-width: 640px) {
+      .qr-box { flex-direction: column; text-align: center; }
+    }
+    .qr-img {
+      width: 100px;
+      height: 100px;
+      border-radius: 6px;
+      background: #fff;
+      padding: 6px;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Brand Masthead -->
+  <div class="masthead">
+    <div class="brand-group">
+      <div class="brand-logos">
+        <img class="logo-dever" src="/assets/logo-dever-white.png" alt="FU-DEVER Logo" />
+        <img class="logo-fptu" src="/assets/logo-fptu.png" alt="FPT University Logo" />
+      </div>
+      <div class="brand-divider"></div>
+      <div class="brand-title-area">
+        <div class="brand-title">PROMPT <span>CHALLENGE</span></div>
+        <div class="brand-subtitle">Gian Hàng Club Day • FU-DEVER</div>
+      </div>
+    </div>
+    <div class="role-badge">Hub Điều Hướng</div>
+  </div>
+
+  <div>
+    <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.01em;">
+      HỆ THỐNG ĐIỀU HÀNH GIAN HÀNG
+    </h1>
+    <p style="color: var(--text-muted); font-size: 14px;">
+      Mở các màn hình tương ứng trên từng thiết bị (Laptop BTC, TV trình chiếu, Tablet 2 đội chơi).
+    </p>
+  </div>
+
+  <div class="hub-grid">
+    <a href="/btc.html" class="hub-card btc">
+      <div>
+        <div class="role-badge btc" style="width: fit-content;">Ban Tổ Chức</div>
+        <div class="hub-title">Bàn Điều Khiển (BTC)</div>
+        <div class="hub-desc">Quản lý ván chơi, chọn ảnh đề bài, bấm giờ, nút gập xuống và xem bảng xếp hạng.</div>
+      </div>
+      <div class="hub-action">Mở màn hình BTC &rarr;</div>
+    </a>
+
+    <a href="/team.html?team=A" class="hub-card team-a">
+      <div>
+        <div class="role-badge team-a" style="width: fit-content;">Đội A</div>
+        <div class="hub-title">Màn Hình Đội A</div>
+        <div class="hub-desc">Dành cho Đội A (máy tính bảng / điện thoại) nhập prompt mô tả lại ảnh gốc.</div>
+      </div>
+      <div class="hub-action">Mở màn hình Đội A &rarr;</div>
+    </a>
+
+    <a href="/team.html?team=B" class="hub-card team-b">
+      <div>
+        <div class="role-badge team-b" style="width: fit-content;">Đội B</div>
+        <div class="hub-title">Màn Hình Đội B</div>
+        <div class="hub-desc">Dành cho Đội B (máy tính bảng / điện thoại) nhập prompt mô tả lại ảnh gốc.</div>
+      </div>
+      <div class="hub-action">Mở màn hình Đội B &rarr;</div>
+    </a>
+
+    <a href="/display.html" class="hub-card display">
+      <div>
+        <div class="role-badge" style="width: fit-content;">Khán Giả / TV</div>
+        <div class="hub-title">Màn Hình Lớn</div>
+        <div class="hub-desc">Trình chiếu cho khán giả xem trực tiếp ảnh đề bài, đếm ngược và kết quả đối đầu.</div>
+      </div>
+      <div class="hub-action">Mở màn hình lớn &rarr;</div>
+    </a>
+  </div>
+
+  <!-- QR Code & LAN Connect Guide -->
+  <div class="qr-box">
+    <img class="qr-img" id="qrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=http://192.168.1.18:3000" alt="QR Code kết nối LAN" />
+    <div>
+      <div style="font-weight: 700; font-size: 15px; color: var(--text); margin-bottom: 4px;">
+        📱 Kết nối nhanh qua WiFi gian hàng:
+      </div>
+      <div style="color: var(--text-muted); font-size: 13px; line-height: 1.6;">
+        Kết nối điện thoại/tablet vào cùng mạng WiFi với máy chủ, sau đó <strong>quét mã QR</strong> bên cạnh hoặc truy cập:
+        <code style="background: var(--bg); padding: 2px 8px; border-radius: 4px; color: var(--accent); font-family: var(--font-mono); font-size: 13px;">
+          http://192.168.1.18:3000
+        </code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Tự cập nhật URL QR code theo hostname hiện tại nếu khác localhost
+const host = window.location.hostname;
+if (host !== 'localhost' && host !== '127.0.0.1') {
+  const currentUrl = window.location.origin;
+  document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(currentUrl)}`;
+}
+</script>
+</body>
+</html>
