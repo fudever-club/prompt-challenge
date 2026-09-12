@@ -127,13 +127,14 @@ prompt-challenge/
     ├── style.css             # Hệ thống CSS Design Token Impeccable
     ├── qrcode.min.js         # Thư viện sinh mã QR LAN tự động
     └── assets/               # Thư viện ảnh, mascot Buggy & logo chính thức
-        ├── logo-dever-color.png
-        ├── logo-dever-white.png
-        ├── logo-fptu.png
-        ├── buggy-welcome.png
-        ├── buggy-cheer.png
-        ├── buggy-thinking.png
-        └── samples/          # Thư viện ảnh đề bài mẫu có sẵn
+        ├── logo-dever-color.png      # Logo DEVER bản màu đầy đủ
+        ├── logo-dever-white.png      # Logo DEVER chuẩn chữ trắng giữ nét gạch đỏ signature (Ưu tiên)
+        ├── logo-dever-full-white.png # Logo DEVER bản monochrome full trắng dự phòng (khi nền quá tương phản)
+        ├── logo-fptu.png             # Logo Đại học FPT
+        ├── buggy-welcome.png         # Linh vật Buggy chào mừng
+        ├── buggy-cheer.png           # Linh vật Buggy cổ vũ
+        ├── buggy-thinking.png        # Linh vật Buggy suy nghĩ
+        └── samples/                  # Thư viện ảnh đề bài mẫu có sẵn
 ```
 
 ---
